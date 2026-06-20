@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.uv-cache/
+
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Application data
+data/raw/*
+data/chroma/*
+data/sqlite/*
+data/tmp/*
+!data/raw/.gitkeep
+!data/chroma/.gitkeep
+!data/sqlite/.gitkeep
+!data/tmp/.gitkeep
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
