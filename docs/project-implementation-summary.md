@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-本项目已经按 `docs/rag-plan.md` 完成第一版 RAG 知识库问答应用。项目面向单用户本地或内网部署场景，使用 `Python + LangChain + Streamlit + Chroma + SQLite` 构建，支持资料上传、文档解析、向量入库、历史会话、会话长期记忆、RAG 问答和 Web 交互。
+本项目已经按 `docs/rag-plan.md` 完成第一版 RAG 知识库问答应用，并完成新版 Web 架构升级。项目面向单用户本地或内网部署场景，核心 RAG 使用 `Python + LangChain + Chroma + SQLite` 构建；新版主要界面使用 `Next.js + shadcn/ui + Tailwind CSS`，通过 `FastAPI` 调用现有 Python 服务。项目支持资料上传、文档解析、向量入库、历史会话、会话长期记忆、RAG 问答和 Web 交互。
 
 当前第一版不包含多用户登录、权限系统、引用来源展示、流式输出、后台任务队列、OCR、图片理解和复杂表格结构化解析。
 
@@ -10,7 +10,9 @@
 
 - 语言：Python 3.11+
 - RAG 编排：LangChain
-- Web 框架：Streamlit
+- Web 框架：Next.js + shadcn/ui + Tailwind CSS
+- API 框架：FastAPI
+- 兼容入口：Streamlit
 - 向量数据库：Chroma，本地持久化
 - 结构化存储：SQLite
 - 配置存储：本地 JSON 配置文件
@@ -100,7 +102,7 @@
 
 ### 9. Web 交互
 
-- 使用 Streamlit 构建正式 Web 应用。
+- 使用 Streamlit 构建第一版 Web 应用，并保留为兼容入口。
 - 使用侧边栏导航组织页面：
   - `Q&A session`
   - `Conversation history`
@@ -112,6 +114,22 @@
 - 文档页支持上传、查看、删除、解析和重建索引。
 - 模型配置页支持保存配置和测试连接。
 - Web 层只调用服务层接口，不直接绕过 RAG 服务或 embedding 层。
+
+### 10. UI 与工作流优化
+
+- 将 Streamlit 界面调整为更接近工作台的布局。
+- 支持批量上传，上传成功后自动解析并索引。
+- 增加设置入口、语言切换、模型配置预设和推荐默认值恢复。
+- 增加本地 embedding API Provider，推荐通过本地模型服务/API 调用 embedding。
+
+### 11. API 与 shadcn 前端
+
+- 新增 `src/rag_app/api/` FastAPI 服务，提供 `rag-api` 启动入口。
+- API 覆盖健康检查、会话、问答、文档、模型配置、预设、默认值恢复和模型测试。
+- 将 `app/` 作为正式 Next.js 前端，使用 shadcn/ui、Radix UI、Tailwind CSS 和 lucide 图标。
+- 新版前端包含左侧会话栏、文档管理、新建会话、设置入口、中央聊天区、批量上传、自动索引和移动端抽屉布局。
+- 前端通过 `NEXT_PUBLIC_RAG_API_BASE_URL` 调用 Python API，默认地址为 `http://localhost:8000`。
+- Web 层不得直接访问 SQLite、Chroma、chat 模型或 embedding 模型。
 
 ## 关键设计
 
@@ -127,12 +145,13 @@
 
 当前已完成以下验证：
 
-- `python -m compileall src`
+- `python -m compileall src tests`
 - `uv run --no-sync pytest`
-- 当前测试结果：`88 passed`
-- Streamlit 本地启动验证通过，HTTP 状态码 `200`
+- 当前测试结果：`104 passed`
+- FastAPI 启动后 `GET /api/health` 返回 `200`
+- 前端已通过 `npm run typecheck`、`npm run lint` 和 `npm run build`
 - Git 当前主分支已同步到远程：
-  - 最新提交：`6f156e7 feat: add web interaction module`
+  - 最新提交：`480c56e feat: add api and shadcn frontend`
 
 ## 后续增强建议
 
@@ -142,4 +161,4 @@
 - 增加后台任务队列，避免大文档索引阻塞页面。
 - 增加 OCR、图片理解和复杂表格结构化解析。
 - 增加多用户登录、权限隔离和审计日志。
-- 当 `src/rag_app/app.py` 继续变大时，可拆分为独立 `web/` 子模块。
+- 新版前端稳定后，再决定是否淡出 Streamlit 兼容入口。

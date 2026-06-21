@@ -6,6 +6,7 @@
 
 - Python `>=3.11,<3.14`
 - `uv`
+- Node.js 和 npm，用于运行新的 Next.js 前端
 - 可用的聊天模型 API，或兼容 OpenAI 接口的模型服务
 - 可用的向量模型 API，或本地 HuggingFace embedding 模型环境
 
@@ -19,7 +20,7 @@ python -m pip install uv
 
 ## 安装依赖
 
-在项目根目录执行：
+在项目根目录安装 Python 依赖：
 
 ```powershell
 uv sync
@@ -29,6 +30,13 @@ uv sync
 
 ```powershell
 python -m uv sync
+```
+
+进入前端目录安装 Node.js 依赖：
+
+```powershell
+cd app
+npm install
 ```
 
 ## 配置数据目录
@@ -57,7 +65,44 @@ APP_LOG_LEVEL=INFO
 
 `data/config/model-config.json` 会由 Web 页面保存生成，包含模型连接信息和 API Key，不会提交到 Git。
 
-## 启动应用
+## 启动应用（推荐）
+
+新版界面使用 `Next.js + shadcn/ui + Tailwind CSS`，后端通过 `FastAPI` 暴露现有 RAG 能力。需要同时启动 API 和前端。
+
+在第一个终端中，从项目根目录启动 API：
+
+```powershell
+uv run rag-api
+```
+
+API 默认地址：
+
+```text
+http://127.0.0.1:8000
+```
+
+在第二个终端中，进入前端目录启动 Next.js：
+
+```powershell
+cd app
+npm run dev
+```
+
+前端默认地址：
+
+```text
+http://127.0.0.1:3000
+```
+
+前端默认调用 `http://localhost:8000`。如果 API 地址不同，可以在 `app/.env.local` 中设置：
+
+```text
+NEXT_PUBLIC_RAG_API_BASE_URL=http://127.0.0.1:8000
+```
+
+## 启动旧版 Streamlit 入口
+
+Streamlit 入口仍保留为兼容和回退入口，但不再是主要 UI 优化方向。
 
 在项目根目录执行：
 
@@ -87,10 +132,12 @@ uv run streamlit run src/rag_app/app.py --server.port 8502
 
 Web 界面默认使用中文。
 
-如果需要切换语言，在页面左侧边栏找到 `界面语言` 控件：
+如果使用新版 Next.js 前端，在左下角打开 `设置`，在设置中切换语言：
 
 - 选择 `中文`：显示中文 UI。
 - 选择 `English`：显示英文 UI。
+
+如果使用旧版 Streamlit 入口，在页面左侧边栏找到 `界面语言` 控件。
 
 语言切换只影响 Web UI 文案，例如页面导航、标题、按钮、输入框提示、状态提示、错误提示和表格列名。用户上传的文档内容、历史会话消息、用户问题和模型回答不会被翻译。
 
@@ -98,7 +145,7 @@ Web 界面默认使用中文。
 
 ### 1. 配置模型
 
-打开 Web 页面后进入 `模型配置`，英文界面中对应为 `Model configuration`。
+打开新版前端后，点击左下角 `设置`，进入模型配置区域。旧版 Streamlit 中对应页面为 `模型配置`，英文界面中对应为 `Model configuration`。
 
 需要配置：
 
@@ -114,22 +161,24 @@ Web 界面默认使用中文。
 - Embedding max concurrency
 - Embedding batch interval seconds
 
-保存配置后，分别点击聊天模型测试和向量模型测试，确认连接可用。
+保存配置后，分别点击聊天模型测试和向量模型测试，确认连接可用。不熟悉参数时建议保持推荐默认值。
 
 ### 2. 上传资料
 
-进入 `文档管理` 页面，英文界面中对应为 `Document management`，上传支持的文件：
+点击左侧栏顶部的 `文档管理`，上传支持的文件：
 
 - PDF
 - Word `.docx`
 - Markdown `.md`
 - TXT
 
-上传时系统会计算 `file_md5`。如果文件内容完全重复，会提示资料已存在，不会重复保存。
+新版前端支持批量上传。上传成功后会自动解析并索引，不需要再手动点击“解析并索引”。
+
+上传时系统会计算 `file_md5`。如果文件内容完全重复，会提示资料已存在，不会重复保存，也不会触发解析索引。
 
 ### 3. 解析并索引
 
-在文档管理页选择文档，执行解析或重建索引。
+新版前端在上传成功后自动解析并索引。文档管理中仍提供重建索引入口，用于手动修复或重新生成向量。
 
 系统会：
 
@@ -144,7 +193,7 @@ Web 界面默认使用中文。
 
 ### 4. 开始问答
 
-进入 `问答会话` 页面，英文界面中对应为 `Q&A session`。
+新版前端默认展示中央聊天区。可以在左侧栏新建会话、打开历史会话，或直接在底部输入框提问。
 
 可以：
 
@@ -158,7 +207,7 @@ Web 界面默认使用中文。
 
 ### 5. 管理历史会话
 
-进入 `历史会话` 页面，英文界面中对应为 `Conversation history`。
+新版前端左侧中部展示历史会话列表。
 
 可以：
 
@@ -187,16 +236,45 @@ uv run --no-sync pytest
 编译检查：
 
 ```powershell
-python -m compileall src
+python -m compileall src tests
+```
+
+前端检查：
+
+```powershell
+cd app
+npm run typecheck
+npm run lint
+npm run build
 ```
 
 当前项目验证结果为：
 
 ```text
-88 passed
+104 passed
 ```
 
 ## 常见问题
+
+### 新版前端打不开
+
+确认 Next.js 开发服务器仍在运行，并检查终端输出的实际端口。默认地址是：
+
+```text
+http://127.0.0.1:3000
+```
+
+如果前端能打开但无法加载数据，确认 API 已启动：
+
+```powershell
+uv run rag-api
+```
+
+并访问健康检查：
+
+```text
+http://127.0.0.1:8000/api/health
+```
 
 ### Streamlit 页面打不开
 
