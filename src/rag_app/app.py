@@ -51,6 +51,7 @@ def main() -> None:
         st.subheader("Module status")
         st.success("Module 01: Project foundation is ready.")
         st.success("Module 02: Model configuration is ready.")
+        st.success("Module 03: Vector store is ready.")
 
     with model_tab:
         render_model_configuration(directories.config)

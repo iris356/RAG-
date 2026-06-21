@@ -13,3 +13,7 @@ class ConfigurationError(RagAppError):
 
 class DataDirectoryError(RagAppError):
     """Raised when data directories cannot be created or accessed."""
+
+
+class VectorStoreError(RagAppError):
+    """Raised when vector storage or retrieval fails."""
