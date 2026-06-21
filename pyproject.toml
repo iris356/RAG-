@@ -10,7 +10,9 @@ dependencies = [
     "langchain-community>=0.3.0",
     "langchain-huggingface>=0.1.0",
     "langchain-openai>=0.2.0",
+    "docx2txt>=0.8",
     "pydantic-settings>=2.0.0",
+    "pypdf>=5.0.0",
     "python-dotenv>=1.0.0",
     "streamlit>=1.40.0",
 ]

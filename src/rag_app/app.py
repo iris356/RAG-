@@ -9,6 +9,7 @@ import streamlit as st
 from rag_app.core.config import get_settings
 from rag_app.core.logging import configure_logging
 from rag_app.core.paths import ensure_data_directories
+from rag_app.documents.processing import DocumentProcessor
 from rag_app.documents.store import DocumentStore
 from rag_app.models.config import (
     ChatModelConfig,
@@ -141,15 +142,29 @@ def render_document_management(
     )
     action_col_1, action_col_2 = st.columns(2)
     with action_col_1:
-        if st.button("Request reindex", use_container_width=True):
+        if st.button("Parse and index", use_container_width=True):
             try:
-                updated = document_store.mark_reindex_requested(selected_document_id)
-                st.success(
-                    "Reindex requested. "
-                    f"Parse status: {updated.parse_status}; index status: {updated.index_status}."
+                document_store.mark_reindex_requested(selected_document_id)
+                processor = DocumentProcessor(
+                    document_store=document_store,
+                    vector_store=vector_store,
                 )
+                result = processor.process_document(selected_document_id, reindex=True)
+                if result.ok:
+                    st.success(result.message)
+                else:
+                    st.error(result.message)
+                if result.vector_write_result is not None:
+                    write = result.vector_write_result
+                    st.info(
+                        "Vector write progress: "
+                        f"{write.processed_texts}/{write.total_texts} chunks, "
+                        f"{write.processed_batches}/{write.total_batches} batches."
+                    )
+                if result.deleted_vectors:
+                    st.caption(f"Deleted old vectors before reindex: {result.deleted_vectors}.")
             except Exception as exc:  # noqa: BLE001 - show controlled storage errors in UI.
-                st.error(f"Failed to request reindex: {exc}")
+                st.error(f"Failed to parse and index document: {exc}")
     with action_col_2:
         if st.button("Delete document", use_container_width=True):
             try:

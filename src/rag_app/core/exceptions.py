@@ -23,6 +23,10 @@ class DocumentStoreError(RagAppError):
     """Raised when document metadata or file storage fails."""
 
 
+class DocumentProcessingError(RagAppError):
+    """Raised when document parsing, splitting, or indexing fails."""
+
+
 class UnsupportedDocumentTypeError(DocumentStoreError):
     """Raised when an uploaded document type is not supported."""
 

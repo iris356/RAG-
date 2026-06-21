@@ -1,5 +1,11 @@
 """Document management services."""
 
+from rag_app.documents.processing import (
+    DocumentProcessResult,
+    DocumentProcessor,
+    calculate_text_md5,
+    normalize_text,
+)
 from rag_app.documents.store import (
     DocumentDeleteResult,
     DocumentRecord,
@@ -10,8 +16,12 @@ from rag_app.documents.store import (
 
 __all__ = [
     "DocumentDeleteResult",
+    "DocumentProcessResult",
+    "DocumentProcessor",
     "DocumentRecord",
     "DocumentStore",
     "DocumentUploadResult",
+    "calculate_text_md5",
     "initialize_document_store",
+    "normalize_text",
 ]
