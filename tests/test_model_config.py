@@ -14,14 +14,18 @@ from rag_app.models.config import (
     EmbeddingModelConfig,
     EmbeddingProvider,
     ModelConfig,
+    ModelConfigPreset,
     RetrievalConfig,
+    apply_model_config_preset,
     get_model_config_path,
     load_model_config,
+    recommended_model_config,
     save_model_config,
     validate_chat_config,
     validate_embedding_config,
 )
 from rag_app.models.service import (
+    LocalApiEmbeddings,
     build_chat_model,
     build_embedding_model,
     test_chat_model as run_chat_model_test,
@@ -38,6 +42,38 @@ def test_load_model_config_returns_defaults_when_missing(tmp_path: Path) -> None
     assert config.embedding.max_concurrency == 1
     assert config.embedding.batch_interval_seconds == 0
     assert config.retrieval.top_k == 5
+
+
+def test_recommended_model_config_uses_stable_defaults() -> None:
+    config = recommended_model_config()
+
+    assert config.retrieval.top_k == 5
+    assert config.embedding.batch_size == 8
+    assert config.embedding.max_concurrency == 1
+    assert config.embedding.batch_interval_seconds == 0
+
+
+@pytest.mark.parametrize(
+    ("preset", "top_k", "batch_size", "max_concurrency", "interval"),
+    [
+        (ModelConfigPreset.STABLE, 5, 8, 1, 0),
+        (ModelConfigPreset.CLOUD_FAST, 5, 16, 3, 0.5),
+        (ModelConfigPreset.LOW_RESOURCE, 3, 4, 1, 0),
+    ],
+)
+def test_apply_model_config_preset_updates_retrieval_and_embedding_limits(
+    preset: ModelConfigPreset,
+    top_k: int,
+    batch_size: int,
+    max_concurrency: int,
+    interval: float,
+) -> None:
+    config = apply_model_config_preset(make_config(), preset)
+
+    assert config.retrieval.top_k == top_k
+    assert config.embedding.batch_size == batch_size
+    assert config.embedding.max_concurrency == max_concurrency
+    assert config.embedding.batch_interval_seconds == interval
 
 
 def test_save_and_load_model_config_round_trip(tmp_path: Path) -> None:
@@ -97,6 +133,18 @@ def test_local_embedding_validation_does_not_require_remote_fields() -> None:
         embedding=EmbeddingModelConfig(
             provider=EmbeddingProvider.LOCAL_HUGGINGFACE,
             model="local-model",
+        )
+    )
+
+    validate_embedding_config(config)
+
+
+def test_local_api_embedding_validation_requires_base_url_but_not_api_key() -> None:
+    config = ModelConfig(
+        embedding=EmbeddingModelConfig(
+            provider=EmbeddingProvider.LOCAL_API,
+            base_url="http://127.0.0.1:8000/v1",
+            model="local-embed",
         )
     )
 
@@ -170,6 +218,24 @@ def test_build_local_embedding_uses_huggingface(monkeypatch: pytest.MonkeyPatch)
     )
 
     assert created == {"model_name": "local-model"}
+
+
+def test_build_local_api_embedding_uses_http_adapter() -> None:
+    embedding = build_embedding_model(
+        make_config(
+            embedding=EmbeddingModelConfig(
+                provider=EmbeddingProvider.LOCAL_API,
+                base_url="http://127.0.0.1:8000/v1",
+                api_key="optional-key",
+                model="local-embed",
+            )
+        )
+    )
+
+    assert isinstance(embedding, LocalApiEmbeddings)
+    assert embedding.base_url == "http://127.0.0.1:8000/v1"
+    assert embedding.api_key == "optional-key"
+    assert embedding.model == "local-embed"
 
 
 def test_chat_test_reports_success(monkeypatch: pytest.MonkeyPatch) -> None:

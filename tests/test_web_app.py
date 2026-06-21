@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from rag_app.app import (
+    AppServices,
     DEFAULT_LANGUAGE,
     LANGUAGE_EN,
     LANGUAGE_ZH,
@@ -16,6 +17,7 @@ from rag_app.app import (
     default_language,
     language_options,
     page_label,
+    process_uploaded_document_for_web,
     resolve_language,
     tr,
     ui_message,
@@ -41,10 +43,13 @@ def test_default_language_and_language_options() -> None:
 def test_key_ui_text_is_localized() -> None:
     assert page_label("qa", LANGUAGE_ZH) == "问答会话"
     assert page_label("qa", LANGUAGE_EN) == "Q&A session"
+    assert tr(LANGUAGE_ZH, "app.title") == "RAG 知识库助手"
+    assert tr(LANGUAGE_ZH, "app.caption") == "基于 Python 和 LangChain 的本地知识库问答工具"
     assert tr(LANGUAGE_ZH, "qa.ask") == "提问"
     assert tr(LANGUAGE_EN, "qa.ask") == "Ask"
     assert tr(LANGUAGE_ZH, "document.table.filename") == "文件名"
     assert tr(LANGUAGE_EN, "document.table.filename") == "Filename"
+    assert "不是重试次数" in tr(LANGUAGE_ZH, "model.batch_interval_help")
 
 
 def test_known_service_messages_are_localized() -> None:
@@ -156,6 +161,50 @@ def test_document_table_row_shows_duplicate_source() -> None:
     assert zh_row["重复"] == "是：original.txt（doc-1）"
 
 
+def test_uploaded_new_document_is_automatically_indexed(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    store = FakeDocumentStore(upload_result=FakeUploadResult(ok=True))
+    processor = FakeDocumentProcessor(ok=True)
+    monkeypatch.setattr("rag_app.app.DocumentProcessor", lambda **_: processor)
+    silence_streamlit(monkeypatch)
+
+    process_uploaded_document_for_web(
+        make_services(tmp_path, document_store=store, vector_store=object()),
+        FakeUploadedFile("new.txt", b"content"),
+        LANGUAGE_EN,
+    )
+
+    assert store.uploaded == [("new.txt", b"content")]
+    assert processor.processed == [("doc-1", True)]
+
+
+def test_uploaded_duplicate_document_is_not_indexed(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    store = FakeDocumentStore(
+        upload_result=FakeUploadResult(
+            ok=False,
+            document=None,
+            duplicate_document=make_document("doc-existing", "existing.txt"),
+        )
+    )
+    processor = FakeDocumentProcessor(ok=True)
+    monkeypatch.setattr("rag_app.app.DocumentProcessor", lambda **_: processor)
+    silence_streamlit(monkeypatch)
+
+    process_uploaded_document_for_web(
+        make_services(tmp_path, document_store=store, vector_store=object()),
+        FakeUploadedFile("existing.txt", b"content"),
+        LANGUAGE_EN,
+    )
+
+    assert store.uploaded == [("existing.txt", b"content")]
+    assert processor.processed == []
+
+
 def make_session(session_id: str, title: str) -> ConversationSession:
     return ConversationSession(
         session_id=session_id,
@@ -200,3 +249,82 @@ def next_value(values: list[str]):
         return remaining.pop(0)
 
     return _next_value
+
+
+class FakeUploadedFile:
+    def __init__(self, name: str, content: bytes) -> None:
+        self.name = name
+        self._content = content
+
+    def getvalue(self) -> bytes:
+        return self._content
+
+
+class FakeUploadResult:
+    def __init__(
+        self,
+        *,
+        ok: bool,
+        document: DocumentRecord | None = None,
+        duplicate_document: DocumentRecord | None = None,
+    ) -> None:
+        self.ok = ok
+        self.message = "Document uploaded: new.txt." if ok else "Document already exists."
+        self.document = document if document is not None else make_document("doc-1", "new.txt")
+        self.duplicate_document = duplicate_document
+        if not ok and duplicate_document is not None:
+            self.document = None
+
+
+class FakeDocumentStore:
+    def __init__(self, *, upload_result: FakeUploadResult) -> None:
+        self.upload_result = upload_result
+        self.uploaded: list[tuple[str, bytes]] = []
+
+    def upload_document(self, filename: str, content_bytes: bytes) -> FakeUploadResult:
+        self.uploaded.append((filename, content_bytes))
+        return self.upload_result
+
+
+class FakeDocumentProcessor:
+    def __init__(self, *, ok: bool) -> None:
+        self.ok = ok
+        self.processed: list[tuple[str, bool]] = []
+
+    def process_document(self, document_id: str, *, reindex: bool = False):
+        self.processed.append((document_id, reindex))
+        document = make_document(document_id, "new.txt")
+
+        class Result:
+            duplicate_of_document_id = None
+            vector_write_result = None
+            deleted_vectors = 0
+
+            def __init__(self, ok: bool) -> None:
+                self.ok = ok
+                self.message = "Wrote 1 vectors to knowledge_chunks."
+                self.document = document
+
+        return Result(self.ok)
+
+
+def make_services(
+    tmp_path: Path,
+    *,
+    document_store,
+    vector_store,
+) -> AppServices:
+    return AppServices(
+        directories=None,
+        document_store=document_store,
+        conversation_store=None,
+        vector_store=vector_store,
+        memory_service=None,
+        rag_service=None,
+        model_config=None,
+    )
+
+
+def silence_streamlit(monkeypatch) -> None:
+    for name in ("success", "info", "warning", "error", "caption"):
+        monkeypatch.setattr(f"rag_app.app.st.{name}", lambda *_, **__: None)

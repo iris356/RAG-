@@ -26,9 +26,12 @@ from rag_app.models.config import (
     ChatModelConfig,
     EmbeddingModelConfig,
     EmbeddingProvider,
+    ModelConfigPreset,
     ModelConfig,
     RetrievalConfig,
+    apply_model_config_preset,
     load_model_config,
+    recommended_model_config,
     save_model_config,
 )
 from rag_app.models.service import test_chat_model, test_embedding_model
@@ -51,7 +54,6 @@ PAGE_MODEL = "model"
 PAGE_OVERVIEW = "overview"
 NAVIGATION_PAGES = (
     PAGE_QA,
-    PAGE_HISTORY,
     PAGE_DOCUMENTS,
     PAGE_MODEL,
     PAGE_OVERVIEW,
@@ -70,15 +72,22 @@ LEGACY_PAGE_KEYS = {
 
 TRANSLATIONS: dict[str, dict[str, str]] = {
     LANGUAGE_ZH: {
-        "app.caption": "Python + LangChain RAG 知识库",
+        "app.title": "RAG 知识库助手",
+        "app.caption": "基于 Python 和 LangChain 的本地知识库问答工具",
         "language.label": "界面语言",
-        "sidebar.navigation": "导航",
+        "sidebar.navigation": "工作台",
         "sidebar.page": "页面",
         "sidebar.data_root": "数据根目录：`{root}`",
+        "sidebar.conversations": "对话记录",
+        "sidebar.no_conversations": "暂无对话记录",
+        "sidebar.settings": "设置",
+        "sidebar.account_soon": "账号登录（预留）",
+        "sidebar.open": "打开",
+        "sidebar.delete": "删",
         "page.qa": "问答会话",
         "page.history": "历史会话",
         "page.documents": "文档管理",
-        "page.model": "模型配置",
+        "page.model": "设置",
         "page.overview": "概览",
         "overview.data_directories": "数据目录",
         "overview.module_status": "模块状态",
@@ -103,7 +112,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "conversation.no_conversations": "暂无会话。",
         "conversation.new_title": "新会话标题",
         "conversation.optional": "可选",
-        "conversation.create": "创建会话",
+        "conversation.create": "新建会话",
         "conversation.created": "已创建会话：{title}。",
         "conversation.create_failed": "创建会话失败：{error}",
         "conversation.selector": "会话",
@@ -131,8 +140,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "conversation.table.created": "创建时间",
         "conversation.table.updated": "更新时间",
         "document.upload_section": "上传文档",
-        "document.file_label": "PDF、Word、Markdown 或 TXT",
-        "document.upload": "上传文档",
+        "document.file_label": "PDF、Word、Markdown 或 TXT，可多选",
+        "document.upload": "上传并自动索引",
+        "document.upload_summary": "批量处理结果",
+        "document.auto_index_success": "{filename} 已上传并完成自动索引。",
         "document.duplicate_of": "重复来源：{filename}（{document_id}）。",
         "document.upload_failed": "上传文档失败：{error}",
         "document.none_uploaded": "暂无已上传文档。",
@@ -162,20 +173,35 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "duplicate.yes_id": "是：{document_id}",
         "duplicate.yes_document": "是：{filename}（{document_id}）",
         "model.chat_section": "聊天模型",
+        "model.beginner_hint": "不熟悉参数时建议保持默认值。稳定优先配置适合本地或新手使用。",
+        "model.account_placeholder": "账号登录",
+        "model.account_placeholder_body": "当前版本暂未实现账号登录。以后登录状态、账号信息和权限设置会放在这里。",
+        "model.preset": "配置模式预设",
+        "model.preset_stable": "稳定模式",
+        "model.preset_cloud_fast": "云端加速模式",
+        "model.preset_low_resource": "低性能电脑模式",
+        "model.apply_preset": "应用预设",
+        "model.restore_recommended": "恢复推荐默认值",
+        "model.recommended_restored": "已恢复推荐默认值。",
+        "model.preset_applied": "已应用预设：{preset}。",
         "model.chat_base_url": "聊天 Base URL",
         "model.chat_api_key": "聊天 API Key",
         "model.chat_model": "聊天模型",
         "model.embedding_section": "向量模型",
         "model.embedding_provider": "向量 Provider",
         "model.embedding_model": "向量模型",
-        "model.embedding_placeholder": "text-embedding-v4 或本地模型路径",
+        "model.embedding_placeholder": "text-embedding-v4 或本地 API 模型名",
         "model.embedding_base_url": "向量 Base URL",
         "model.embedding_api_key": "向量 API Key",
         "model.retrieval_limits": "检索与本地向量限速",
         "model.top_k": "Top K",
+        "model.top_k_help": "控制每次问答检索多少段相关内容。",
         "model.batch_size": "向量批量大小",
+        "model.batch_size_help": "控制每批处理多少段文本。",
         "model.max_concurrency": "向量最大并发数",
+        "model.max_concurrency_help": "控制同时处理多少个向量批次。本地服务或低性能电脑建议保持 1。",
         "model.batch_interval": "向量批次间隔秒数",
+        "model.batch_interval_help": "控制批次之间等待多久，用于缓解接口限流；这不是重试次数。",
         "model.save_chat": "保存聊天配置",
         "model.save_embedding": "保存向量配置",
         "model.test_chat": "测试聊天模型",
@@ -218,15 +244,22 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "service.embedding_test_failed": "向量模型测试失败：{error}",
     },
     LANGUAGE_EN: {
+        "app.title": "RAG Knowledge App",
         "app.caption": "Python + LangChain RAG knowledge base",
         "language.label": "Language",
-        "sidebar.navigation": "Navigation",
+        "sidebar.navigation": "Workspace",
         "sidebar.page": "Page",
         "sidebar.data_root": "Data root: `{root}`",
+        "sidebar.conversations": "Conversations",
+        "sidebar.no_conversations": "No conversations yet",
+        "sidebar.settings": "Settings",
+        "sidebar.account_soon": "Account sign-in (reserved)",
+        "sidebar.open": "Open",
+        "sidebar.delete": "Del",
         "page.qa": "Q&A session",
         "page.history": "Conversation history",
         "page.documents": "Document management",
-        "page.model": "Model configuration",
+        "page.model": "Settings",
         "page.overview": "Overview",
         "overview.data_directories": "Data directories",
         "overview.module_status": "Module status",
@@ -279,8 +312,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "conversation.table.created": "Created",
         "conversation.table.updated": "Updated",
         "document.upload_section": "Upload document",
-        "document.file_label": "PDF, Word, Markdown, or TXT",
-        "document.upload": "Upload document",
+        "document.file_label": "PDF, Word, Markdown, or TXT; multiple files supported",
+        "document.upload": "Upload and auto-index",
+        "document.upload_summary": "Batch processing results",
+        "document.auto_index_success": "{filename} uploaded and indexed.",
         "document.duplicate_of": "Duplicate of {filename} ({document_id}).",
         "document.upload_failed": "Failed to upload document: {error}",
         "document.none_uploaded": "No documents uploaded yet.",
@@ -310,20 +345,35 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "duplicate.yes_id": "Yes: {document_id}",
         "duplicate.yes_document": "Yes: {filename} ({document_id})",
         "model.chat_section": "Chat model",
+        "model.beginner_hint": "If you are unsure, keep the recommended defaults. They prioritize stability.",
+        "model.account_placeholder": "Account sign-in",
+        "model.account_placeholder_body": "Account login is not implemented yet. Future account status, identity, and permission settings will live here.",
+        "model.preset": "Configuration preset",
+        "model.preset_stable": "Stable",
+        "model.preset_cloud_fast": "Cloud fast",
+        "model.preset_low_resource": "Low-resource computer",
+        "model.apply_preset": "Apply preset",
+        "model.restore_recommended": "Restore recommended defaults",
+        "model.recommended_restored": "Recommended defaults restored.",
+        "model.preset_applied": "Applied preset: {preset}.",
         "model.chat_base_url": "Chat base URL",
         "model.chat_api_key": "Chat API key",
         "model.chat_model": "Chat model",
         "model.embedding_section": "Embedding model",
         "model.embedding_provider": "Embedding provider",
         "model.embedding_model": "Embedding model",
-        "model.embedding_placeholder": "text-embedding-v4 or local model path",
+        "model.embedding_placeholder": "text-embedding-v4 or local API model name",
         "model.embedding_base_url": "Embedding base URL",
         "model.embedding_api_key": "Embedding API key",
         "model.retrieval_limits": "Retrieval and local embedding limits",
         "model.top_k": "Top K",
+        "model.top_k_help": "Controls how many related chunks are retrieved for each answer.",
         "model.batch_size": "Embedding batch size",
+        "model.batch_size_help": "Controls how many text chunks are processed in each batch.",
         "model.max_concurrency": "Embedding max concurrency",
+        "model.max_concurrency_help": "Controls how many embedding batches run at once. Keep this at 1 for local services or low-resource computers.",
         "model.batch_interval": "Embedding batch interval seconds",
+        "model.batch_interval_help": "Wait time between batches to reduce rate limits; this is not a retry count.",
         "model.save_chat": "Save chat",
         "model.save_embedding": "Save embedding",
         "model.test_chat": "Test chat model",
@@ -527,11 +577,14 @@ def main() -> None:
     configure_logging(settings.log_level)
     directories = ensure_data_directories(settings.data_dir)
 
-    st.set_page_config(page_title=settings.app_name, page_icon=":books:", layout="wide")
-    st.title(settings.app_name)
-
     services = build_app_services(directories)
-    page, language = render_sidebar(directories)
+    language = resolve_language(st.session_state.get(LANGUAGE_STATE_KEY))
+    app_title = tr(language, "app.title")
+    st.set_page_config(page_title=app_title, page_icon=":books:", layout="wide")
+    apply_workspace_style()
+
+    page, language = render_sidebar(services)
+    st.title(tr(language, "app.title"))
     st.caption(tr(language, "app.caption"))
 
     if page == PAGE_QA:
@@ -578,19 +631,11 @@ def build_app_services(directories: DataDirectories) -> AppServices:
     )
 
 
-def render_sidebar(directories: DataDirectories) -> tuple[str, str]:
-    """Render language selection and page navigation."""
+def render_sidebar(services: AppServices) -> tuple[str, str]:
+    """Render Codex-like workspace navigation and conversation shortcuts."""
 
     current_language = resolve_language(st.session_state.get(LANGUAGE_STATE_KEY))
-    current_label = LANGUAGE_LABELS_BY_CODE[current_language]
-    selected_language_label = st.sidebar.selectbox(
-        tr(current_language, "language.label"),
-        LANGUAGE_OPTIONS,
-        index=LANGUAGE_OPTIONS.index(current_label),
-        key=LANGUAGE_WIDGET_STATE_KEY,
-    )
-    language = resolve_language(selected_language_label)
-    st.session_state[LANGUAGE_STATE_KEY] = language
+    language = current_language
 
     requested_page = st.session_state.pop(REQUESTED_PAGE_STATE_KEY, None)
     requested_page = LEGACY_PAGE_KEYS.get(requested_page, requested_page)
@@ -603,15 +648,108 @@ def render_sidebar(directories: DataDirectories) -> tuple[str, str]:
         st.session_state[NAVIGATION_STATE_KEY] = PAGE_QA
 
     st.sidebar.header(tr(language, "sidebar.navigation"))
-    selected_page = st.sidebar.radio(
-        tr(language, "sidebar.page"),
-        NAVIGATION_PAGES,
-        format_func=lambda page: page_label(page, language),
-        key=NAVIGATION_STATE_KEY,
-    )
+    top_col_1, top_col_2 = st.sidebar.columns(2)
+    with top_col_1:
+        if st.button(
+            page_label(PAGE_DOCUMENTS, language),
+            use_container_width=True,
+            key="sidebar_documents_button",
+        ):
+            st.session_state[NAVIGATION_STATE_KEY] = PAGE_DOCUMENTS
+            st.rerun()
+    with top_col_2:
+        if st.button(
+            tr(language, "conversation.create"),
+            use_container_width=True,
+            key="sidebar_new_conversation_button",
+        ):
+            try:
+                session = services.conversation_store.create_session()
+                st.session_state[SELECTED_CONVERSATION_STATE_KEY] = session.session_id
+                st.session_state[NAVIGATION_STATE_KEY] = PAGE_QA
+                st.rerun()
+            except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
+                st.sidebar.error(tr(language, "conversation.create_failed", error=exc))
+
     st.sidebar.divider()
-    st.sidebar.caption(tr(language, "sidebar.data_root", root=directories.root))
+    st.sidebar.caption(tr(language, "sidebar.conversations"))
+    render_sidebar_conversation_list(services, language)
+    st.sidebar.divider()
+    if st.sidebar.button(
+        tr(language, "sidebar.settings"),
+        use_container_width=True,
+        key="sidebar_settings_button",
+    ):
+        st.session_state[NAVIGATION_STATE_KEY] = PAGE_MODEL
+        st.rerun()
+    with st.sidebar.expander(tr(language, "sidebar.account_soon"), expanded=False):
+        st.caption(tr(language, "model.account_placeholder_body"))
+    st.sidebar.caption(tr(language, "sidebar.data_root", root=services.directories.root))
+    selected_page = st.session_state.get(NAVIGATION_STATE_KEY, PAGE_QA)
     return selected_page, language
+
+
+def apply_workspace_style() -> None:
+    """Apply lightweight workspace styling over Streamlit defaults."""
+
+    st.markdown(
+        """
+        <style>
+        [data-testid="stSidebar"] {
+            background: #f7f7f8;
+            border-right: 1px solid #e6e6e7;
+        }
+        [data-testid="stSidebar"] button {
+            border-radius: 8px;
+        }
+        .block-container {
+            max-width: 980px;
+            padding-top: 2rem;
+        }
+        div[data-testid="stChatMessage"] {
+            border-radius: 14px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_sidebar_conversation_list(services: AppServices, language: str) -> None:
+    """Render compact conversation rows with open/delete actions."""
+
+    sessions = _load_sessions(services.conversation_store, language)
+    if not sessions:
+        st.sidebar.caption(tr(language, "sidebar.no_conversations"))
+        return
+
+    selected_session_id = st.session_state.get(SELECTED_CONVERSATION_STATE_KEY)
+    for session in sessions:
+        label = session.title
+        if session.session_id == selected_session_id:
+            label = f"* {label}"
+        row_open, row_delete = st.sidebar.columns([5, 1])
+        with row_open:
+            if st.button(
+                label,
+                use_container_width=True,
+                key=f"sidebar_open_{session.session_id}",
+            ):
+                st.session_state[SELECTED_CONVERSATION_STATE_KEY] = session.session_id
+                st.session_state[NAVIGATION_STATE_KEY] = PAGE_QA
+                st.rerun()
+        with row_delete:
+            if st.button(
+                tr(language, "sidebar.delete"),
+                key=f"sidebar_delete_{session.session_id}",
+            ):
+                try:
+                    services.memory_service.delete_session_with_memories(session.session_id)
+                    if selected_session_id == session.session_id:
+                        st.session_state.pop(SELECTED_CONVERSATION_STATE_KEY, None)
+                    st.rerun()
+                except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
+                    st.sidebar.error(tr(language, "conversation.delete_failed", error=exc))
 
 
 def render_overview_page(directories: DataDirectories, language: str) -> None:
@@ -669,27 +807,20 @@ def render_overview_page(directories: DataDirectories, language: str) -> None:
 def render_qa_page(services: AppServices, language: str) -> None:
     """Render the main RAG question-answering page."""
 
-    st.header(page_label(PAGE_QA, language))
     sessions = _load_sessions(services.conversation_store, language)
-
-    control_col, selector_col = st.columns(2)
-    with control_col:
-        render_create_conversation_form(
+    selected_session_id = _selected_session_id(
+        sessions,
+        st.session_state.get(SELECTED_CONVERSATION_STATE_KEY),
+    )
+    if selected_session_id:
+        st.session_state[SELECTED_CONVERSATION_STATE_KEY] = selected_session_id
+        render_current_conversation(
             services.conversation_store,
-            form_key="qa_create",
-            language=language,
+            selected_session_id,
+            language,
         )
-
-    selected_session_id: str | None = None
-    with selector_col:
-        if sessions:
-            selected_session_id = render_conversation_selector(
-                sessions=sessions,
-                key="qa_conversation_selector",
-                language=language,
-            )
-        else:
-            st.info(tr(language, "conversation.no_conversations_auto"))
+    else:
+        st.info(tr(language, "conversation.no_conversations_auto"))
 
     submitted_result = render_rag_question_form(
         rag_service=services.rag_service,
@@ -701,13 +832,7 @@ def render_qa_page(services: AppServices, language: str) -> None:
         selected_session_id = submitted_result.session_id
         st.session_state[SELECTED_CONVERSATION_STATE_KEY] = selected_session_id
         _show_rag_result(submitted_result, language)
-
-    if selected_session_id:
-        render_current_conversation(
-            services.conversation_store,
-            selected_session_id,
-            language,
-        )
+        st.rerun()
 
 
 def render_create_conversation_form(
@@ -777,6 +902,7 @@ def render_rag_question_form(
         question = st.text_area(
             tr(language, "qa.question"),
             placeholder=tr(language, "qa.question_placeholder"),
+            label_visibility="collapsed",
         )
         submitted = st.form_submit_button(tr(language, "qa.ask"), use_container_width=True)
 
@@ -909,49 +1035,15 @@ def render_document_management_page(services: AppServices, language: str) -> Non
 
     st.header(page_label(PAGE_DOCUMENTS, language))
     st.subheader(tr(language, "document.upload_section"))
-    uploaded_file = st.file_uploader(
+    uploaded_files = st.file_uploader(
         tr(language, "document.file_label"),
         type=["pdf", "docx", "md", "markdown", "txt"],
+        accept_multiple_files=True,
     )
-    if uploaded_file and st.button(tr(language, "document.upload"), use_container_width=True):
-        try:
-            result = services.document_store.upload_document(
-                uploaded_file.name,
-                uploaded_file.getvalue(),
-            )
-            if result.ok:
-                if result.document is not None:
-                    st.success(
-                        tr(
-                            language,
-                            "service.document_uploaded",
-                            filename=result.document.original_filename,
-                        )
-                    )
-                else:
-                    st.success(ui_message(result.message, language))
-            else:
-                if result.duplicate_document is not None:
-                    st.warning(
-                        tr(
-                            language,
-                            "service.document_duplicate",
-                            document_id=result.duplicate_document.document_id,
-                        )
-                    )
-                else:
-                    st.warning(ui_message(result.message, language))
-                if result.duplicate_document is not None:
-                    st.info(
-                        tr(
-                            language,
-                            "document.duplicate_of",
-                            filename=result.duplicate_document.original_filename,
-                            document_id=result.duplicate_document.document_id,
-                        )
-                    )
-        except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
-            st.error(tr(language, "document.upload_failed", error=exc))
+    if uploaded_files and st.button(tr(language, "document.upload"), use_container_width=True):
+        st.subheader(tr(language, "document.upload_summary"))
+        for uploaded_file in uploaded_files:
+            process_uploaded_document_for_web(services, uploaded_file, language)
 
     documents = _load_documents(services.document_store, language)
     if not documents:
@@ -1003,6 +1095,70 @@ def render_document_management_page(services: AppServices, language: str) -> Non
                 st.rerun()
             except Exception as exc:  # noqa: BLE001 - show controlled storage/vector errors.
                 st.error(tr(language, "document.delete_failed", error=exc))
+
+
+def process_uploaded_document_for_web(
+    services: AppServices,
+    uploaded_file: Any,
+    language: str,
+) -> None:
+    """Upload one file and automatically run parsing/indexing when it is new."""
+
+    try:
+        upload_result = services.document_store.upload_document(
+            uploaded_file.name,
+            uploaded_file.getvalue(),
+        )
+    except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
+        st.error(tr(language, "document.upload_failed", error=exc))
+        return
+
+    if not upload_result.ok:
+        if upload_result.duplicate_document is not None:
+            st.warning(
+                tr(
+                    language,
+                    "service.document_duplicate",
+                    document_id=upload_result.duplicate_document.document_id,
+                )
+            )
+            st.info(
+                tr(
+                    language,
+                    "document.duplicate_of",
+                    filename=upload_result.duplicate_document.original_filename,
+                    document_id=upload_result.duplicate_document.document_id,
+                )
+            )
+        else:
+            st.warning(ui_message(upload_result.message, language))
+        return
+
+    if upload_result.document is None:
+        st.success(ui_message(upload_result.message, language))
+        return
+
+    st.info(
+        tr(
+            language,
+            "service.document_uploaded",
+            filename=upload_result.document.original_filename,
+        )
+    )
+    processor = DocumentProcessor(
+        document_store=services.document_store,
+        vector_store=services.vector_store,
+    )
+    result = processor.process_document(upload_result.document.document_id, reindex=True)
+    _show_document_process_result(result, language)
+    if result.ok and not result.duplicate_of_document_id:
+        st.success(
+            tr(
+                language,
+                "document.auto_index_success",
+                filename=upload_result.document.original_filename,
+            )
+        )
 
 
 def process_document_for_web(
@@ -1059,6 +1215,72 @@ def render_model_configuration_page(config_dir: Path, language: str) -> None:
 
     st.header(page_label(PAGE_MODEL, language))
     model_config = load_model_config(config_dir)
+    st.info(tr(language, "model.beginner_hint"))
+
+    st.subheader(tr(language, "language.label"))
+    current_label = LANGUAGE_LABELS_BY_CODE[language]
+    selected_language_label = st.selectbox(
+        tr(language, "language.label"),
+        LANGUAGE_OPTIONS,
+        index=LANGUAGE_OPTIONS.index(current_label),
+        key=LANGUAGE_WIDGET_STATE_KEY,
+        label_visibility="collapsed",
+    )
+    selected_language = resolve_language(selected_language_label)
+    if selected_language != language:
+        st.session_state[LANGUAGE_STATE_KEY] = selected_language
+        st.rerun()
+
+    with st.expander(tr(language, "model.account_placeholder"), expanded=False):
+        st.caption(tr(language, "model.account_placeholder_body"))
+
+    preset_labels = {
+        ModelConfigPreset.STABLE: tr(language, "model.preset_stable"),
+        ModelConfigPreset.CLOUD_FAST: tr(language, "model.preset_cloud_fast"),
+        ModelConfigPreset.LOW_RESOURCE: tr(language, "model.preset_low_resource"),
+    }
+    preset = st.selectbox(
+        tr(language, "model.preset"),
+        options=list(preset_labels),
+        format_func=lambda value: preset_labels[value],
+    )
+    preset_col, restore_col = st.columns(2)
+    with preset_col:
+        if st.button(tr(language, "model.apply_preset"), use_container_width=True):
+            config_path = save_model_config(
+                apply_model_config_preset(model_config, preset),
+                config_dir,
+            )
+            st.success(
+                tr(
+                    language,
+                    "model.preset_applied",
+                    preset=preset_labels[preset],
+                )
+            )
+            st.caption(str(config_path))
+            st.rerun()
+    with restore_col:
+        if st.button(tr(language, "model.restore_recommended"), use_container_width=True):
+            recommended = recommended_model_config()
+            config_path = save_model_config(
+                model_config.model_copy(
+                    update={
+                        "embedding": model_config.embedding.model_copy(
+                            update={
+                                "batch_size": recommended.embedding.batch_size,
+                                "max_concurrency": recommended.embedding.max_concurrency,
+                                "batch_interval_seconds": recommended.embedding.batch_interval_seconds,
+                            }
+                        ),
+                        "retrieval": recommended.retrieval,
+                    }
+                ),
+                config_dir,
+            )
+            st.success(tr(language, "model.recommended_restored"))
+            st.caption(str(config_path))
+            st.rerun()
 
     st.subheader(tr(language, "model.chat_section"))
     chat_base_url = st.text_input(
@@ -1090,10 +1312,13 @@ def render_model_configuration_page(config_dir: Path, language: str) -> None:
         placeholder=tr(language, "model.embedding_placeholder"),
     )
 
-    use_remote_embedding = embedding_provider == EmbeddingProvider.OPENAI_COMPATIBLE.value
+    use_embedding_api = embedding_provider in (
+        EmbeddingProvider.OPENAI_COMPATIBLE.value,
+        EmbeddingProvider.LOCAL_API.value,
+    )
     embedding_base_url = ""
     embedding_api_key = ""
-    if use_remote_embedding:
+    if use_embedding_api:
         embedding_base_url = st.text_input(
             tr(language, "model.embedding_base_url"),
             value=model_config.embedding.base_url,
@@ -1111,24 +1336,28 @@ def render_model_configuration_page(config_dir: Path, language: str) -> None:
         min_value=1,
         value=model_config.retrieval.top_k,
         step=1,
+        help=tr(language, "model.top_k_help"),
     )
     batch_size = st.number_input(
         tr(language, "model.batch_size"),
         min_value=1,
         value=model_config.embedding.batch_size,
         step=1,
+        help=tr(language, "model.batch_size_help"),
     )
     max_concurrency = st.number_input(
         tr(language, "model.max_concurrency"),
         min_value=1,
         value=model_config.embedding.max_concurrency,
         step=1,
+        help=tr(language, "model.max_concurrency_help"),
     )
     batch_interval_seconds = st.number_input(
         tr(language, "model.batch_interval"),
         min_value=0.0,
         value=float(model_config.embedding.batch_interval_seconds),
         step=0.1,
+        help=tr(language, "model.batch_interval_help"),
     )
 
     updated_config = ModelConfig(
