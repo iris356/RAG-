@@ -18,8 +18,9 @@ def main() -> int:
         if not existing_pythonpath
         else f"{src_path}{os.pathsep}{existing_pythonpath}"
     )
+    env.setdefault("STREAMLIT_BROWSER_GATHER_USAGE_STATS", "false")
 
-    command = [sys.executable, "-m", "streamlit", "run", str(app_path)]
+    command = [sys.executable, "-m", "streamlit", "run", str(app_path), *sys.argv[1:]]
     return subprocess.call(command, env=env)
 
 

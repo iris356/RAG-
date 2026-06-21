@@ -12,6 +12,7 @@ def test_get_data_directories_returns_expected_paths(tmp_path: Path) -> None:
     assert directories.raw == tmp_path.resolve() / "raw"
     assert directories.chroma == tmp_path.resolve() / "chroma"
     assert directories.sqlite == tmp_path.resolve() / "sqlite"
+    assert directories.config == tmp_path.resolve() / "config"
     assert directories.tmp == tmp_path.resolve() / "tmp"
 
 
@@ -21,4 +22,5 @@ def test_ensure_data_directories_creates_directories(tmp_path: Path) -> None:
     assert directories.raw.is_dir()
     assert directories.chroma.is_dir()
     assert directories.sqlite.is_dir()
+    assert directories.config.is_dir()
     assert directories.tmp.is_dir()

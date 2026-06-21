@@ -28,10 +28,12 @@ logs/
 data/raw/*
 data/chroma/*
 data/sqlite/*
+data/config/*
 data/tmp/*
 !data/raw/.gitkeep
 !data/chroma/.gitkeep
 !data/sqlite/.gitkeep
+!data/config/.gitkeep
 !data/tmp/.gitkeep
 
 # OS / editor

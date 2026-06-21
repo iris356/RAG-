@@ -16,6 +16,7 @@ class DataDirectories:
     raw: Path
     chroma: Path
     sqlite: Path
+    config: Path
     tmp: Path
 
 
@@ -28,6 +29,7 @@ def get_data_directories(data_root: Path) -> DataDirectories:
         raw=root / "raw",
         chroma=root / "chroma",
         sqlite=root / "sqlite",
+        config=root / "config",
         tmp=root / "tmp",
     )
 
@@ -42,6 +44,7 @@ def ensure_data_directories(data_root: Path) -> DataDirectories:
             directories.raw,
             directories.chroma,
             directories.sqlite,
+            directories.config,
             directories.tmp,
         ):
             path.mkdir(parents=True, exist_ok=True)
