@@ -6,6 +6,11 @@ from pathlib import Path
 
 import streamlit as st
 
+from rag_app.conversations.store import (
+    ROLE_ASSISTANT,
+    ROLE_USER,
+    ConversationStore,
+)
 from rag_app.core.config import get_settings
 from rag_app.core.logging import configure_logging
 from rag_app.core.paths import ensure_data_directories
@@ -37,9 +42,11 @@ def main() -> None:
 
     document_store = DocumentStore(sqlite_dir=directories.sqlite, raw_dir=directories.raw)
     document_store.initialize()
+    conversation_store = ConversationStore(sqlite_dir=directories.sqlite)
+    conversation_store.initialize()
 
-    overview_tab, documents_tab, model_tab = st.tabs(
-        ["Overview", "Documents", "Model configuration"]
+    overview_tab, conversations_tab, documents_tab, model_tab = st.tabs(
+        ["Overview", "Conversations", "Documents", "Model configuration"]
     )
 
     with overview_tab:
@@ -61,6 +68,11 @@ def main() -> None:
         st.success("Module 02: Model configuration is ready.")
         st.success("Module 03: Vector store is ready.")
         st.success("Module 04: Document management is ready.")
+        st.success("Module 05: Document parsing and splitting is ready.")
+        st.success("Module 06: Conversation history is ready.")
+
+    with conversations_tab:
+        render_conversation_history(conversation_store)
 
     with documents_tab:
         render_document_management(
@@ -71,6 +83,139 @@ def main() -> None:
 
     with model_tab:
         render_model_configuration(directories.config)
+
+
+def render_conversation_history(conversation_store: ConversationStore) -> None:
+    """Render the conversation history page."""
+
+    st.subheader("Start conversation")
+    create_col, first_message_col = st.columns(2)
+    with create_col:
+        with st.form("create_conversation_form"):
+            title = st.text_input("Title", placeholder="Optional conversation title")
+            submitted = st.form_submit_button("Create conversation", use_container_width=True)
+        if submitted:
+            try:
+                session = conversation_store.create_session(title.strip() or None)
+                st.success(f"Created conversation: {session.title}.")
+                st.session_state["selected_conversation_id"] = session.session_id
+                st.rerun()
+            except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
+                st.error(f"Failed to create conversation: {exc}")
+    with first_message_col:
+        with st.form("first_user_message_form"):
+            first_message = st.text_area(
+                "First user message",
+                placeholder="Create a conversation titled from this message",
+            )
+            submitted = st.form_submit_button(
+                "Create from first message",
+                use_container_width=True,
+            )
+        if submitted:
+            try:
+                session = conversation_store.get_or_create_session_for_first_user_message(
+                    first_message
+                )
+                conversation_store.add_message(
+                    session.session_id,
+                    ROLE_USER,
+                    first_message,
+                )
+                st.success(f"Created conversation: {session.title}.")
+                st.session_state["selected_conversation_id"] = session.session_id
+                st.rerun()
+            except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
+                st.error(f"Failed to create conversation from message: {exc}")
+
+    st.subheader("History")
+    try:
+        sessions = conversation_store.list_sessions()
+    except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
+        st.error(f"Failed to load conversations: {exc}")
+        sessions = []
+
+    if not sessions:
+        st.info("No conversations yet.")
+        return
+
+    st.dataframe(
+        [
+            {
+                "Session ID": session.session_id,
+                "Title": session.title,
+                "Created": session.created_at,
+                "Updated": session.updated_at,
+            }
+            for session in sessions
+        ],
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    selected_session_id = st.selectbox(
+        "Conversation",
+        options=[session.session_id for session in sessions],
+        index=_conversation_select_index(sessions),
+        format_func=lambda session_id: _format_conversation_option(session_id, sessions),
+    )
+    st.session_state["selected_conversation_id"] = selected_session_id
+
+    try:
+        conversation = conversation_store.get_conversation(selected_session_id)
+    except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
+        st.error(f"Failed to open conversation: {exc}")
+        return
+
+    st.subheader(conversation.session.title)
+    if not conversation.messages:
+        st.info("No messages in this conversation yet.")
+    else:
+        for message in conversation.messages:
+            with st.chat_message(message.role):
+                st.write(message.content)
+                st.caption(message.created_at)
+
+    with st.form("add_conversation_message_form"):
+        role = st.radio(
+            "Role",
+            options=[ROLE_USER, ROLE_ASSISTANT],
+            horizontal=True,
+        )
+        content = st.text_area("Message")
+        submitted = st.form_submit_button("Add message", use_container_width=True)
+    if submitted:
+        try:
+            conversation_store.add_message(selected_session_id, role, content)
+            st.success("Message saved.")
+            st.rerun()
+        except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
+            st.error(f"Failed to save message: {exc}")
+
+    action_col_1, action_col_2 = st.columns(2)
+    with action_col_1:
+        with st.form("rename_conversation_form"):
+            new_title = st.text_input("New title", value=conversation.session.title)
+            submitted = st.form_submit_button("Rename conversation", use_container_width=True)
+        if submitted:
+            try:
+                conversation_store.rename_session(selected_session_id, new_title)
+                st.success("Conversation renamed.")
+                st.rerun()
+            except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
+                st.error(f"Failed to rename conversation: {exc}")
+    with action_col_2:
+        if st.button("Delete conversation", use_container_width=True):
+            try:
+                deleted_messages = conversation_store.delete_session(selected_session_id)
+                st.success(
+                    "Conversation deleted. "
+                    f"Deleted SQLite messages: {deleted_messages}."
+                )
+                st.session_state.pop("selected_conversation_id", None)
+                st.rerun()
+            except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
+                st.error(f"Failed to delete conversation: {exc}")
 
 
 def render_document_management(
@@ -181,6 +326,21 @@ def _format_document_option(document_id: str, documents: list) -> str:
         if document.document_id == document_id:
             return f"{document.original_filename} ({document.document_id})"
     return document_id
+
+
+def _conversation_select_index(sessions: list) -> int:
+    selected_session_id = st.session_state.get("selected_conversation_id")
+    for index, session in enumerate(sessions):
+        if session.session_id == selected_session_id:
+            return index
+    return 0
+
+
+def _format_conversation_option(session_id: str, sessions: list) -> str:
+    for session in sessions:
+        if session.session_id == session_id:
+            return f"{session.title} ({session.session_id})"
+    return session_id
 
 
 def render_model_configuration(config_dir: Path) -> None:

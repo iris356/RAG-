@@ -27,6 +27,10 @@ class DocumentProcessingError(RagAppError):
     """Raised when document parsing, splitting, or indexing fails."""
 
 
+class ConversationStoreError(RagAppError):
+    """Raised when conversation sessions or messages cannot be stored."""
+
+
 class UnsupportedDocumentTypeError(DocumentStoreError):
     """Raised when an uploaded document type is not supported."""
 
