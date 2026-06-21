@@ -273,3 +273,12 @@
 - 测试非重复资料可以正常解析、切分、限速向量化并写入 Chroma。
 - 测试删除重复文档不会误删原始文档向量。
 - 测试删除原始文档时，系统能清晰处理或提示其关联的重复文档。
+## Web UI architecture update
+
+为满足更现代、精致和响应式的前端体验，Web 层从单一 Streamlit 页面扩展为：
+
+- `Next.js + shadcn/ui + Tailwind CSS` 前端作为新的主要用户界面。
+- `FastAPI` HTTP API 作为前端与现有 Python RAG 服务之间的边界。
+- 原 Streamlit 入口继续保留为兼容和回退入口。
+
+本调整不改变核心 RAG 技术栈：`Python + LangChain + Chroma + SQLite` 继续负责文档解析、向量入库、检索问答、会话历史和会话记忆。前端不得直接调用 chat 或 embedding 模型，必须通过 Python API 调用现有服务层。
