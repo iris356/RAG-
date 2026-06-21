@@ -318,7 +318,7 @@ class ConversationStore:
         return connection
 
     def _now(self) -> str:
-        return self._now_factory().astimezone(UTC).replace(microsecond=0).isoformat()
+        return self._now_factory().astimezone(UTC).isoformat()
 
 
 def initialize_conversation_store(sqlite_dir: Path) -> Path:

@@ -35,6 +35,10 @@ class ConversationMemoryError(RagAppError):
     """Raised when conversation memory vectors cannot be synchronized."""
 
 
+class RagAnswerError(RagAppError):
+    """Raised when RAG question answering cannot be completed."""
+
+
 class UnsupportedDocumentTypeError(DocumentStoreError):
     """Raised when an uploaded document type is not supported."""
 

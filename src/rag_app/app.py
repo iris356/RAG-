@@ -30,6 +30,7 @@ from rag_app.models.config import (
     save_model_config,
 )
 from rag_app.models.service import test_chat_model, test_embedding_model
+from rag_app.qa.service import RagAnswerResult, RagAnswerService
 from rag_app.vectors.store import VectorStore
 
 
@@ -75,6 +76,7 @@ def main() -> None:
         st.success("Module 05: Document parsing and splitting is ready.")
         st.success("Module 06: Conversation history is ready.")
         st.success("Module 07: Conversation long-term memory is ready.")
+        st.success("Module 08: RAG question answering is ready.")
 
     with conversations_tab:
         render_conversation_history(
@@ -107,6 +109,12 @@ def render_conversation_history(
     memory_service = ConversationMemoryService(
         conversation_store=conversation_store,
         vector_store=vector_store,
+    )
+    rag_service = RagAnswerService(
+        conversation_store=conversation_store,
+        memory_service=memory_service,
+        vector_store=vector_store,
+        model_config=model_config,
     )
 
     st.subheader("Start conversation")
@@ -162,6 +170,12 @@ def render_conversation_history(
         sessions = []
 
     if not sessions:
+        st.subheader("Ask with RAG")
+        render_rag_question_form(
+            rag_service=rag_service,
+            session_id=None,
+            form_key="rag_question_form_empty",
+        )
         st.info("No conversations yet.")
         return
 
@@ -194,6 +208,12 @@ def render_conversation_history(
         return
 
     st.subheader(conversation.session.title)
+    render_rag_question_form(
+        rag_service=rag_service,
+        session_id=selected_session_id,
+        form_key=f"rag_question_form_{selected_session_id}",
+    )
+
     if not conversation.messages:
         st.info("No messages in this conversation yet.")
     else:
@@ -260,6 +280,46 @@ def render_conversation_history(
                 st.rerun()
             except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
                 st.error(f"Failed to delete conversation: {exc}")
+
+
+def render_rag_question_form(
+    *,
+    rag_service: RagAnswerService,
+    session_id: str | None,
+    form_key: str,
+) -> None:
+    """Render a minimal RAG question form for module eight verification."""
+
+    with st.form(form_key):
+        question = st.text_area("Question", placeholder="Ask the knowledge base")
+        submitted = st.form_submit_button("Ask with RAG", use_container_width=True)
+    if not submitted:
+        return
+
+    try:
+        result = rag_service.answer_question(question, session_id=session_id)
+        st.session_state["selected_conversation_id"] = result.session_id
+        if result.ok:
+            st.success(result.message)
+        else:
+            st.warning(result.message)
+        _show_rag_result(result)
+    except Exception as exc:  # noqa: BLE001 - show controlled RAG errors in UI.
+        st.error(f"Failed to answer question: {exc}")
+
+
+def _show_rag_result(result: RagAnswerResult) -> None:
+    st.info(
+        "Retrieved context: "
+        f"{result.knowledge_result_count} knowledge chunks, "
+        f"{result.memory_result_count} conversation memories."
+    )
+    with st.chat_message(ROLE_ASSISTANT):
+        st.write(result.answer)
+    if result.user_memory_result is not None:
+        _show_memory_progress(result.user_memory_result)
+    if result.assistant_memory_result is not None:
+        _show_memory_progress(result.assistant_memory_result)
 
 
 def _show_memory_progress(result: ConversationMemoryResult) -> None:
