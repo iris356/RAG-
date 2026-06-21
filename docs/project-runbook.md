@@ -83,11 +83,22 @@ http://localhost:8501
 uv run streamlit run src/rag_app/app.py --server.port 8502
 ```
 
+## 界面语言
+
+Web 界面默认使用中文。
+
+如果需要切换语言，在页面左侧边栏找到 `界面语言` 控件：
+
+- 选择 `中文`：显示中文 UI。
+- 选择 `English`：显示英文 UI。
+
+语言切换只影响 Web UI 文案，例如页面导航、标题、按钮、输入框提示、状态提示、错误提示和表格列名。用户上传的文档内容、历史会话消息、用户问题和模型回答不会被翻译。
+
 ## 首次使用流程
 
 ### 1. 配置模型
 
-打开 Web 页面后进入 `Model configuration`。
+打开 Web 页面后进入 `模型配置`，英文界面中对应为 `Model configuration`。
 
 需要配置：
 
@@ -107,7 +118,7 @@ uv run streamlit run src/rag_app/app.py --server.port 8502
 
 ### 2. 上传资料
 
-进入 `Document management` 页面，上传支持的文件：
+进入 `文档管理` 页面，英文界面中对应为 `Document management`，上传支持的文件：
 
 - PDF
 - Word `.docx`
@@ -133,7 +144,7 @@ uv run streamlit run src/rag_app/app.py --server.port 8502
 
 ### 4. 开始问答
 
-进入 `Q&A session` 页面。
+进入 `问答会话` 页面，英文界面中对应为 `Q&A session`。
 
 可以：
 
@@ -147,7 +158,7 @@ uv run streamlit run src/rag_app/app.py --server.port 8502
 
 ### 5. 管理历史会话
 
-进入 `Conversation history` 页面。
+进入 `历史会话` 页面，英文界面中对应为 `Conversation history`。
 
 可以：
 

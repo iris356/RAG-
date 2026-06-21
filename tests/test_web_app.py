@@ -3,6 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from rag_app.app import (
+    DEFAULT_LANGUAGE,
+    LANGUAGE_EN,
+    LANGUAGE_ZH,
     _conversation_select_index,
     _conversation_table_row,
     _document_table_row,
@@ -10,6 +13,12 @@ from rag_app.app import (
     _format_document_option,
     _format_duplicate_document,
     _selected_session_id,
+    default_language,
+    language_options,
+    page_label,
+    resolve_language,
+    tr,
+    ui_message,
 )
 from rag_app.conversations.store import ROLE_USER, ConversationSession, ConversationStore
 from rag_app.documents.store import (
@@ -19,6 +28,36 @@ from rag_app.documents.store import (
     STATUS_UPLOADED,
     DocumentRecord,
 )
+
+
+def test_default_language_and_language_options() -> None:
+    assert default_language() == DEFAULT_LANGUAGE == LANGUAGE_ZH
+    assert language_options() == ("中文", "English")
+    assert resolve_language("中文") == LANGUAGE_ZH
+    assert resolve_language("English") == LANGUAGE_EN
+    assert resolve_language("missing") == LANGUAGE_ZH
+
+
+def test_key_ui_text_is_localized() -> None:
+    assert page_label("qa", LANGUAGE_ZH) == "问答会话"
+    assert page_label("qa", LANGUAGE_EN) == "Q&A session"
+    assert tr(LANGUAGE_ZH, "qa.ask") == "提问"
+    assert tr(LANGUAGE_EN, "qa.ask") == "Ask"
+    assert tr(LANGUAGE_ZH, "document.table.filename") == "文件名"
+    assert tr(LANGUAGE_EN, "document.table.filename") == "Filename"
+
+
+def test_known_service_messages_are_localized() -> None:
+    assert ui_message("Answer generated and saved.", LANGUAGE_ZH) == "回答已生成并保存。"
+    assert ui_message("Answer generated and saved.", LANGUAGE_EN) == "Answer generated and saved."
+    assert (
+        ui_message("Wrote 3 vectors to knowledge_chunks.", LANGUAGE_ZH)
+        == "已向 knowledge_chunks 写入 3 个向量。"
+    )
+    assert (
+        ui_message("Chat model test failed: bad key", LANGUAGE_ZH)
+        == "聊天模型测试失败：bad key"
+    )
 
 
 def test_selected_session_falls_back_to_first_session() -> None:
@@ -60,11 +99,16 @@ def test_conversation_table_row_includes_message_count(tmp_path: Path) -> None:
     store.add_message(session.session_id, ROLE_USER, "First")
     store.add_message(session.session_id, ROLE_USER, "Second")
 
-    row = _conversation_table_row(store, session)
+    row = _conversation_table_row(store, session, LANGUAGE_EN)
 
     assert row["Session ID"] == "session-1"
     assert row["Title"] == "Research"
     assert row["Messages"] == 2
+
+    zh_row = _conversation_table_row(store, session, LANGUAGE_ZH)
+    assert zh_row["会话 ID"] == "session-1"
+    assert zh_row["标题"] == "Research"
+    assert zh_row["消息数"] == 2
 
 
 def test_document_option_and_duplicate_formatting() -> None:
@@ -79,8 +123,16 @@ def test_document_option_and_duplicate_formatting() -> None:
 
     assert _format_document_option("doc-1", documents) == "original.txt (doc-1)"
     assert _format_document_option("missing", documents) == "missing"
-    assert _format_duplicate_document(original, documents) == "No"
-    assert _format_duplicate_document(duplicate, documents) == "Yes: original.txt (doc-1)"
+    assert _format_duplicate_document(original, documents, LANGUAGE_EN) == "No"
+    assert (
+        _format_duplicate_document(duplicate, documents, LANGUAGE_EN)
+        == "Yes: original.txt (doc-1)"
+    )
+    assert _format_duplicate_document(original, documents, LANGUAGE_ZH) == "否"
+    assert (
+        _format_duplicate_document(duplicate, documents, LANGUAGE_ZH)
+        == "是：original.txt（doc-1）"
+    )
 
 
 def test_document_table_row_shows_duplicate_source() -> None:
@@ -92,11 +144,16 @@ def test_document_table_row_shows_duplicate_source() -> None:
         duplicate_of_document_id="doc-1",
     )
 
-    row = _document_table_row(duplicate, [duplicate, original])
+    row = _document_table_row(duplicate, [duplicate, original], LANGUAGE_EN)
 
     assert row["Document ID"] == "doc-2"
     assert row["Status"] == STATUS_DUPLICATE
     assert row["Duplicate"] == "Yes: original.txt (doc-1)"
+
+    zh_row = _document_table_row(duplicate, [duplicate, original], LANGUAGE_ZH)
+    assert zh_row["文档 ID"] == "doc-2"
+    assert zh_row["状态"] == STATUS_DUPLICATE
+    assert zh_row["重复"] == "是：original.txt（doc-1）"
 
 
 def make_session(session_id: str, title: str) -> ConversationSession:
