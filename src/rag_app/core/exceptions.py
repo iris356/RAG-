@@ -17,3 +17,15 @@ class DataDirectoryError(RagAppError):
 
 class VectorStoreError(RagAppError):
     """Raised when vector storage or retrieval fails."""
+
+
+class DocumentStoreError(RagAppError):
+    """Raised when document metadata or file storage fails."""
+
+
+class UnsupportedDocumentTypeError(DocumentStoreError):
+    """Raised when an uploaded document type is not supported."""
+
+
+class DuplicateDocumentError(DocumentStoreError):
+    """Raised when a document duplicates an existing stored document."""

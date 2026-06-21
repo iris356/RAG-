@@ -9,6 +9,7 @@ import streamlit as st
 from rag_app.core.config import get_settings
 from rag_app.core.logging import configure_logging
 from rag_app.core.paths import ensure_data_directories
+from rag_app.documents.store import DocumentStore
 from rag_app.models.config import (
     ChatModelConfig,
     EmbeddingModelConfig,
@@ -19,6 +20,7 @@ from rag_app.models.config import (
     save_model_config,
 )
 from rag_app.models.service import test_chat_model, test_embedding_model
+from rag_app.vectors.store import VectorStore
 
 
 def main() -> None:
@@ -32,7 +34,12 @@ def main() -> None:
     st.title(settings.app_name)
     st.caption("Python + LangChain RAG knowledge base foundation")
 
-    overview_tab, model_tab = st.tabs(["Overview", "Model configuration"])
+    document_store = DocumentStore(sqlite_dir=directories.sqlite, raw_dir=directories.raw)
+    document_store.initialize()
+
+    overview_tab, documents_tab, model_tab = st.tabs(
+        ["Overview", "Documents", "Model configuration"]
+    )
 
     with overview_tab:
         st.subheader("Data directories")
@@ -52,9 +59,113 @@ def main() -> None:
         st.success("Module 01: Project foundation is ready.")
         st.success("Module 02: Model configuration is ready.")
         st.success("Module 03: Vector store is ready.")
+        st.success("Module 04: Document management is ready.")
+
+    with documents_tab:
+        render_document_management(
+            document_store=document_store,
+            chroma_dir=directories.chroma,
+            config_dir=directories.config,
+        )
 
     with model_tab:
         render_model_configuration(directories.config)
+
+
+def render_document_management(
+    *,
+    document_store: DocumentStore,
+    chroma_dir: Path,
+    config_dir: Path,
+) -> None:
+    """Render the document management page."""
+
+    model_config = load_model_config(config_dir)
+    vector_store = VectorStore(chroma_dir=chroma_dir, model_config=model_config)
+
+    st.subheader("Upload document")
+    uploaded_file = st.file_uploader(
+        "PDF, Word, Markdown, or TXT",
+        type=["pdf", "docx", "md", "markdown", "txt"],
+    )
+    if uploaded_file and st.button("Upload document", use_container_width=True):
+        try:
+            result = document_store.upload_document(
+                uploaded_file.name,
+                uploaded_file.getvalue(),
+            )
+            if result.ok:
+                st.success(result.message)
+            else:
+                st.warning(result.message)
+        except Exception as exc:  # noqa: BLE001 - show controlled storage errors in UI.
+            st.error(f"Failed to upload document: {exc}")
+
+    st.subheader("Documents")
+    try:
+        documents = document_store.list_documents()
+    except Exception as exc:  # noqa: BLE001 - show controlled storage errors in UI.
+        st.error(f"Failed to load documents: {exc}")
+        documents = []
+
+    if not documents:
+        st.info("No documents uploaded yet.")
+        return
+
+    st.dataframe(
+        [
+            {
+                "Document ID": document.document_id,
+                "Filename": document.original_filename,
+                "Type": document.file_type,
+                "Size": document.file_size,
+                "Status": document.status,
+                "Parse": document.parse_status,
+                "Index": document.index_status,
+                "Chunks": document.chunk_count,
+                "Duplicate": document.duplicate_of_document_id or "",
+                "Created": document.created_at,
+                "Updated": document.updated_at,
+            }
+            for document in documents
+        ],
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.subheader("Document actions")
+    selected_document_id = st.selectbox(
+        "Document",
+        options=[document.document_id for document in documents],
+        format_func=lambda document_id: _format_document_option(document_id, documents),
+    )
+    action_col_1, action_col_2 = st.columns(2)
+    with action_col_1:
+        if st.button("Request reindex", use_container_width=True):
+            try:
+                updated = document_store.mark_reindex_requested(selected_document_id)
+                st.success(
+                    "Reindex requested. "
+                    f"Parse status: {updated.parse_status}; index status: {updated.index_status}."
+                )
+            except Exception as exc:  # noqa: BLE001 - show controlled storage errors in UI.
+                st.error(f"Failed to request reindex: {exc}")
+    with action_col_2:
+        if st.button("Delete document", use_container_width=True):
+            try:
+                result = document_store.delete_document(selected_document_id, vector_store)
+                st.success(
+                    f"{result.message} Deleted vectors: {result.deleted_vectors}."
+                )
+            except Exception as exc:  # noqa: BLE001 - show controlled storage/vector errors in UI.
+                st.error(f"Failed to delete document: {exc}")
+
+
+def _format_document_option(document_id: str, documents: list) -> str:
+    for document in documents:
+        if document.document_id == document_id:
+            return f"{document.original_filename} ({document.document_id})"
+    return document_id
 
 
 def render_model_configuration(config_dir: Path) -> None:
