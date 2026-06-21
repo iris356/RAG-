@@ -6,6 +6,10 @@ from pathlib import Path
 
 import streamlit as st
 
+from rag_app.conversations.memory import (
+    ConversationMemoryResult,
+    ConversationMemoryService,
+)
 from rag_app.conversations.store import (
     ROLE_ASSISTANT,
     ROLE_USER,
@@ -70,9 +74,14 @@ def main() -> None:
         st.success("Module 04: Document management is ready.")
         st.success("Module 05: Document parsing and splitting is ready.")
         st.success("Module 06: Conversation history is ready.")
+        st.success("Module 07: Conversation long-term memory is ready.")
 
     with conversations_tab:
-        render_conversation_history(conversation_store)
+        render_conversation_history(
+            conversation_store=conversation_store,
+            chroma_dir=directories.chroma,
+            config_dir=directories.config,
+        )
 
     with documents_tab:
         render_document_management(
@@ -85,8 +94,20 @@ def main() -> None:
         render_model_configuration(directories.config)
 
 
-def render_conversation_history(conversation_store: ConversationStore) -> None:
+def render_conversation_history(
+    *,
+    conversation_store: ConversationStore,
+    chroma_dir: Path,
+    config_dir: Path,
+) -> None:
     """Render the conversation history page."""
+
+    model_config = load_model_config(config_dir)
+    vector_store = VectorStore(chroma_dir=chroma_dir, model_config=model_config)
+    memory_service = ConversationMemoryService(
+        conversation_store=conversation_store,
+        vector_store=vector_store,
+    )
 
     st.subheader("Start conversation")
     create_col, first_message_col = st.columns(2)
@@ -117,12 +138,17 @@ def render_conversation_history(conversation_store: ConversationStore) -> None:
                 session = conversation_store.get_or_create_session_for_first_user_message(
                     first_message
                 )
-                conversation_store.add_message(
+                message = conversation_store.add_message(
                     session.session_id,
                     ROLE_USER,
                     first_message,
                 )
-                st.success(f"Created conversation: {session.title}.")
+                memory_result = memory_service.write_message_memory(message)
+                if memory_result.ok:
+                    st.success(f"Created conversation: {session.title}.")
+                else:
+                    st.warning(memory_result.message)
+                _show_memory_progress(memory_result)
                 st.session_state["selected_conversation_id"] = session.session_id
                 st.rerun()
             except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
@@ -186,13 +212,19 @@ def render_conversation_history(conversation_store: ConversationStore) -> None:
         submitted = st.form_submit_button("Add message", use_container_width=True)
     if submitted:
         try:
-            conversation_store.add_message(selected_session_id, role, content)
-            st.success("Message saved.")
-            st.rerun()
+            message = conversation_store.add_message(selected_session_id, role, content)
+            memory_result = memory_service.write_message_memory(message)
+            if memory_result.ok:
+                st.success("Message saved and written to long-term memory.")
+                _show_memory_progress(memory_result)
+                st.rerun()
+            else:
+                st.warning(memory_result.message)
+                _show_memory_progress(memory_result)
         except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
             st.error(f"Failed to save message: {exc}")
 
-    action_col_1, action_col_2 = st.columns(2)
+    action_col_1, action_col_2, action_col_3 = st.columns(3)
     with action_col_1:
         with st.form("rename_conversation_form"):
             new_title = st.text_input("New title", value=conversation.session.title)
@@ -205,17 +237,44 @@ def render_conversation_history(conversation_store: ConversationStore) -> None:
             except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
                 st.error(f"Failed to rename conversation: {exc}")
     with action_col_2:
+        if st.button("Rebuild memory", use_container_width=True):
+            try:
+                result = memory_service.rebuild_session_memories(selected_session_id)
+                if result.ok:
+                    st.success(result.message)
+                else:
+                    st.error(result.message)
+                _show_memory_progress(result)
+                if result.deleted_vectors:
+                    st.caption(
+                        f"Deleted old memory vectors before rebuild: {result.deleted_vectors}."
+                    )
+            except Exception as exc:  # noqa: BLE001 - show controlled memory errors.
+                st.error(f"Failed to rebuild conversation memory: {exc}")
+    with action_col_3:
         if st.button("Delete conversation", use_container_width=True):
             try:
-                deleted_messages = conversation_store.delete_session(selected_session_id)
-                st.success(
-                    "Conversation deleted. "
-                    f"Deleted SQLite messages: {deleted_messages}."
-                )
+                result = memory_service.delete_session_with_memories(selected_session_id)
+                st.success(result.message)
                 st.session_state.pop("selected_conversation_id", None)
                 st.rerun()
             except Exception as exc:  # noqa: BLE001 - show controlled storage errors.
                 st.error(f"Failed to delete conversation: {exc}")
+
+
+def _show_memory_progress(result: ConversationMemoryResult) -> None:
+    write = result.vector_write_result
+    if write is not None:
+        st.info(
+            "Memory write progress: "
+            f"{write.processed_texts}/{write.total_texts} messages, "
+            f"{write.processed_batches}/{write.total_batches} batches."
+        )
+    elif result.total_messages:
+        st.info(
+            "Memory sync progress: "
+            f"{result.written_messages}/{result.total_messages} messages."
+        )
 
 
 def render_document_management(

@@ -31,6 +31,10 @@ class ConversationStoreError(RagAppError):
     """Raised when conversation sessions or messages cannot be stored."""
 
 
+class ConversationMemoryError(RagAppError):
+    """Raised when conversation memory vectors cannot be synchronized."""
+
+
 class UnsupportedDocumentTypeError(DocumentStoreError):
     """Raised when an uploaded document type is not supported."""
 
