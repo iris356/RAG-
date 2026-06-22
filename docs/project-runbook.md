@@ -94,7 +94,7 @@ npm run dev
 http://127.0.0.1:3000
 ```
 
-前端默认调用 `http://localhost:8000`。如果 API 地址不同，可以在 `app/.env.local` 中设置：
+前端默认调用 `http://127.0.0.1:8000`。如果 API 地址不同，可以在 `app/.env.local` 中设置：
 
 ```text
 NEXT_PUBLIC_RAG_API_BASE_URL=http://127.0.0.1:8000
@@ -254,6 +254,14 @@ npm run build
 104 passed
 ```
 
+最近一次产品级前端验证还包括：
+
+- `uv run --no-sync pytest tests/test_api_app.py`
+- `npm.cmd run typecheck`
+- `npm.cmd run lint`
+- `npm.cmd run build`
+- Playwright 生产模式桌面和移动端页面检查
+
 ## 常见问题
 
 ### 新版前端打不开
@@ -274,6 +282,38 @@ uv run rag-api
 
 ```text
 http://127.0.0.1:8000/api/health
+```
+
+### API 启动时报端口占用
+
+如果执行 `uv run rag-api` 时出现类似错误：
+
+```text
+[Errno 10048] error while attempting to bind on address ('127.0.0.1', 8000)
+```
+
+说明 `127.0.0.1:8000` 已经被其他进程占用，通常是上一次启动的 API 没有关掉。先查看占用端口的 PID：
+
+```powershell
+netstat -ano | Select-String ':8000'
+```
+
+再查看该进程是否为 Python 或 uv 启动的旧 API：
+
+```powershell
+Get-Process -Id <PID>
+```
+
+确认无误后停止旧进程：
+
+```powershell
+Stop-Process -Id <PID> -Force
+```
+
+然后重新启动：
+
+```powershell
+uv run rag-api
 ```
 
 ### Streamlit 页面打不开

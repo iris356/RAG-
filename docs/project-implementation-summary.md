@@ -128,8 +128,24 @@
 - API 覆盖健康检查、会话、问答、文档、模型配置、预设、默认值恢复和模型测试。
 - 将 `app/` 作为正式 Next.js 前端，使用 shadcn/ui、Radix UI、Tailwind CSS 和 lucide 图标。
 - 新版前端包含左侧会话栏、文档管理、新建会话、设置入口、中央聊天区、批量上传、自动索引和移动端抽屉布局。
-- 前端通过 `NEXT_PUBLIC_RAG_API_BASE_URL` 调用 Python API，默认地址为 `http://localhost:8000`。
+- 前端通过 `NEXT_PUBLIC_RAG_API_BASE_URL` 调用 Python API，默认地址为 `http://127.0.0.1:8000`。
 - Web 层不得直接访问 SQLite、Chroma、chat 模型或 embedding 模型。
+
+### 12. 前端视觉优化
+
+- 优化 Next.js 工作台视觉层级，使界面更接近正式本地工具。
+- 调整侧边栏、聊天区、文档管理页和设置页的布局密度与状态展示。
+- 保持 API、RAG 服务、SQLite、Chroma 和模型调用流程不变。
+- 继续将 Streamlit 作为兼容入口，主要 UI 迭代转向 `app/` Next.js 前端。
+
+### 13. 产品级前端优化
+
+- 使用 `build-web-apps` 插件流程对 `app/` 前端进行产品级优化。
+- 重构桌面工作台侧边栏、聊天页、文档管理页和设置页。
+- 移动端改为本地菜单状态，并为文档管理提供移动卡片视图。
+- 增加稳定测试选择器和 Playwright 开发依赖，支持真实浏览器 QA。
+- 前端默认 API 地址统一为 `http://127.0.0.1:8000`。
+- FastAPI CORS 保留本地前端端口 `3000` 和 QA/备用端口 `3001`。
 
 ## 关键设计
 
@@ -150,8 +166,13 @@
 - 当前测试结果：`104 passed`
 - FastAPI 启动后 `GET /api/health` 返回 `200`
 - 前端已通过 `npm run typecheck`、`npm run lint` 和 `npm run build`
+- Playwright 生产模式 QA 已通过：
+  - 桌面视口：`1440x960`
+  - 移动视口：`390x844`
+  - 覆盖聊天输入、桌面文档导航、设置页、移动菜单、移动端文档卡片和上传按钮。
+  - 浏览器 console 未发现错误。
 - Git 当前主分支已同步到远程：
-  - 最新提交：`480c56e feat: add api and shadcn frontend`
+  - 最新提交：`0ef5994 feat: polish product-grade frontend workspace`
 
 ## 后续增强建议
 

@@ -23,7 +23,7 @@
 - API 层只做 HTTP 编排，通过 `DocumentStore`、`DocumentProcessor`、`ConversationStore`、`ConversationMemoryService` 和 `RagAnswerService` 复用现有能力。
 - API 返回统一 envelope：成功包含 `ok`、`message`、`data`；失败包含 `ok=false`、`message`、`code`。
 - 文档上传接口支持多文件 multipart 上传，新文件上传后自动解析和索引，重复文件不触发解析索引。
-- Next 前端通过 `NEXT_PUBLIC_RAG_API_BASE_URL` 调用 Python API，默认地址为 `http://localhost:8000`。
+- Next 前端通过 `NEXT_PUBLIC_RAG_API_BASE_URL` 调用 Python API；当前默认地址已统一为 `http://127.0.0.1:8000`。
 - 设置页保留模型配置、检索参数、向量限速参数、预设、恢复推荐默认值、语言切换和账号登录占位。
 
 ## 已验证的测试或检查
@@ -40,7 +40,7 @@
 
 - 当前 API 不做鉴权，仍面向本机或内网单用户使用。
 - 当前文档索引仍在请求流程内同步执行，大文件上传可能需要后续引入后台任务。
-- 当前 Browser 插件的跨工具页面验证受限于本地 dev server 无法在后台保持，已用构建、HTTP 200 和静态检查覆盖基础可运行性。
+- 模块 11 阶段主要使用构建、HTTP 200 和静态检查覆盖基础可运行性；后续模块 13 已补充 Playwright 生产模式桌面和移动端 QA。
 - 后续可在新前端稳定后，再决定是否淡出 Streamlit 入口。
 - 如需账号登录，应优先在 FastAPI 层增加认证与用户上下文，再让前端设置入口接入。
 
