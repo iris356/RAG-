@@ -4,15 +4,21 @@ import * as React from "react"
 import {
   BotIcon,
   CheckIcon,
+  Clock3Icon,
   DatabaseIcon,
   FileTextIcon,
+  GaugeIcon,
+  HardDriveIcon,
+  Layers3Icon,
   Loader2Icon,
   MenuIcon,
   MessageSquareIcon,
   PlusIcon,
   RefreshCwIcon,
+  SearchIcon,
   SendIcon,
   SettingsIcon,
+  SparklesIcon,
   Trash2Icon,
   UploadIcon,
   UserIcon,
@@ -26,6 +32,7 @@ import {
   type DocumentRecord,
   type ModelConfig,
 } from "@/lib/api"
+import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -109,6 +116,7 @@ const text = {
   zh: {
     title: "RAG 知识库助手",
     subtitle: "基于 Python 和 LangChain 的本地知识库问答工具",
+    workspace: "本地工作台",
     documents: "文档管理",
     newChat: "新建会话",
     conversations: "对话记录",
@@ -120,7 +128,6 @@ const text = {
     emptyDescription: "上传资料后，提问时会自动检索知识库和当前会话记忆。",
     send: "发送",
     upload: "上传文档",
-    files: "文件",
     filename: "文件名",
     status: "状态",
     parse: "解析",
@@ -154,10 +161,23 @@ const text = {
     testChat: "测试聊天",
     testEmbedding: "测试向量",
     apiOffline: "无法连接 Python API",
+    ready: "API 已连接",
+    localVector: "本地向量库",
+    currentSession: "当前会话",
+    messageCount: "消息",
+    documentCount: "文档",
+    indexedChunks: "索引块",
+    uploadHint: "拖选或批量选择资料，系统会自动解析、去重并写入向量库。",
+    askHint: "知识库检索和当前会话记忆会一起参与回答。",
+    quickStart: "开始使用",
+    promptOne: "这份资料的核心结论是什么？",
+    promptTwo: "根据知识库给我一个简短答案。",
+    promptThree: "当前会话里我们确认了哪些事项？",
   },
   en: {
     title: "RAG Knowledge App",
     subtitle: "Local knowledge-base Q&A with Python and LangChain",
+    workspace: "Local workspace",
     documents: "Documents",
     newChat: "New chat",
     conversations: "Conversations",
@@ -170,7 +190,6 @@ const text = {
       "After uploading documents, questions retrieve both knowledge chunks and current-session memory.",
     send: "Send",
     upload: "Upload documents",
-    files: "Files",
     filename: "Filename",
     status: "Status",
     parse: "Parse",
@@ -206,6 +225,19 @@ const text = {
     testChat: "Test chat",
     testEmbedding: "Test embedding",
     apiOffline: "Python API is unreachable",
+    ready: "API connected",
+    localVector: "Local vector store",
+    currentSession: "Current session",
+    messageCount: "Messages",
+    documentCount: "Documents",
+    indexedChunks: "Indexed chunks",
+    uploadHint:
+      "Select documents in batches. The system parses, deduplicates, and indexes automatically.",
+    askHint: "Knowledge retrieval and current-session memory are both used for answers.",
+    quickStart: "Quick start",
+    promptOne: "What is the core conclusion of this document?",
+    promptTwo: "Give me a concise answer from the knowledge base.",
+    promptThree: "What have we confirmed in this conversation?",
   },
 } satisfies Record<Language, Record<string, string>>
 
@@ -238,6 +270,14 @@ export function RagWorkspace() {
   const [apiError, setApiError] = React.useState<string | null>(null)
   const fileInputRef = React.useRef<HTMLInputElement | null>(null)
   const t = text[language]
+
+  const selectedSession = conversations.find(
+    (session) => session.session_id === selectedSessionId
+  )
+  const indexedChunks = documents.reduce(
+    (total, document) => total + (document.chunk_count || 0),
+    0
+  )
 
   const loadWorkspace = React.useCallback(async () => {
     setApiError(null)
@@ -430,142 +470,29 @@ export function RagWorkspace() {
     }
   }
 
+  const sidebar = (
+    <WorkspaceSidebar
+      t={t}
+      view={view}
+      setView={setView}
+      conversations={conversations}
+      selectedSessionId={selectedSessionId}
+      setSelectedSessionId={setSelectedSessionId}
+      isLoading={isLoading}
+      createConversation={createConversation}
+      deleteConversation={deleteConversation}
+      documentCount={documents.length}
+    />
+  )
+
   return (
     <SidebarProvider>
-      <Sidebar collapsible="none">
-        <SidebarHeader className="gap-3 p-3">
-          <div className="flex items-center gap-2 px-1">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-primary-foreground">
-              RAG
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium">{t.title}</div>
-              <div className="truncate text-xs text-muted-foreground">
-                {api.baseUrl}
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant={view === "documents" ? "secondary" : "outline"}
-              size="sm"
-              onClick={() => setView("documents")}
-            >
-              <FileTextIcon data-icon="inline-start" />
-              {t.documents}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => void createConversation()}>
-              <PlusIcon data-icon="inline-start" />
-              {t.newChat}
-            </Button>
-          </div>
-        </SidebarHeader>
-        <SidebarSeparator />
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>{t.conversations}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              {isLoading ? (
-                <div className="flex flex-col gap-2 px-2">
-                  <Skeleton className="h-8" />
-                  <Skeleton className="h-8" />
-                  <Skeleton className="h-8" />
-                </div>
-              ) : (
-                <SidebarMenu>
-                  {conversations.map((session) => (
-                    <SidebarMenuItem key={session.session_id}>
-                      <SidebarMenuButton
-                        isActive={selectedSessionId === session.session_id && view === "chat"}
-                        onClick={() => {
-                          setSelectedSessionId(session.session_id)
-                          setView("chat")
-                        }}
-                      >
-                        <MessageSquareIcon />
-                        <span>{session.title}</span>
-                      </SidebarMenuButton>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <SidebarMenuAction
-                            showOnHover
-                            onClick={() => void deleteConversation(session.session_id)}
-                          >
-                            <Trash2Icon />
-                            <span className="sr-only">{t.delete}</span>
-                          </SidebarMenuAction>
-                        </TooltipTrigger>
-                        <TooltipContent>{t.delete}</TooltipContent>
-                      </Tooltip>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              )}
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarSeparator />
-        <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                isActive={view === "settings"}
-                onClick={() => setView("settings")}
-              >
-                <SettingsIcon />
-                <span>{t.settings}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton>
-                <UserIcon />
-                <span>{t.account}</span>
-                <Badge variant="secondary" className="ml-auto">
-                  {t.accountHint}
-                </Badge>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <header className="flex h-14 items-center gap-3 border-b px-4 md:hidden">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button size="icon-sm" variant="ghost">
-                <MenuIcon />
-                <span className="sr-only">Menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left">
-              <SheetHeader>
-                <SheetTitle>{t.title}</SheetTitle>
-                <SheetDescription>{t.subtitle}</SheetDescription>
-              </SheetHeader>
-              <div className="flex flex-col gap-2 px-4">
-                <Button variant="outline" onClick={() => setView("documents")}>
-                  <FileTextIcon data-icon="inline-start" />
-                  {t.documents}
-                </Button>
-                <Button variant="outline" onClick={() => void createConversation()}>
-                  <PlusIcon data-icon="inline-start" />
-                  {t.newChat}
-                </Button>
-                <Button variant="outline" onClick={() => setView("settings")}>
-                  <SettingsIcon data-icon="inline-start" />
-                  {t.settings}
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium">{t.title}</div>
-            <div className="truncate text-xs text-muted-foreground">{t.subtitle}</div>
-          </div>
-        </header>
+      {sidebar}
+      <SidebarInset className="rag-workbench-bg">
+        <MobileHeader t={t} setView={setView} createConversation={createConversation} />
         {apiError ? (
           <main className="flex min-h-svh items-center justify-center p-6">
-            <Empty>
+            <Empty className="rounded-2xl border bg-card/80 p-8 shadow-sm">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <DatabaseIcon />
@@ -584,7 +511,7 @@ export function RagWorkspace() {
             </Empty>
           </main>
         ) : (
-          <main className="min-h-svh bg-background">
+          <main className="min-h-svh">
             {view === "chat" && (
               <ChatView
                 t={t}
@@ -593,13 +520,17 @@ export function RagWorkspace() {
                 setQuestion={setQuestion}
                 sendQuestion={sendQuestion}
                 isSending={isSending}
-                selectedSessionId={selectedSessionId}
+                selectedSession={selectedSession}
+                conversations={conversations}
+                documents={documents}
+                indexedChunks={indexedChunks}
               />
             )}
             {view === "documents" && (
               <DocumentsView
                 t={t}
                 documents={documents}
+                indexedChunks={indexedChunks}
                 isUploading={isUploading}
                 fileInputRef={fileInputRef}
                 uploadFiles={uploadFiles}
@@ -627,6 +558,196 @@ export function RagWorkspace() {
   )
 }
 
+function WorkspaceSidebar({
+  t,
+  view,
+  setView,
+  conversations,
+  selectedSessionId,
+  setSelectedSessionId,
+  isLoading,
+  createConversation,
+  deleteConversation,
+  documentCount,
+}: {
+  t: Record<string, string>
+  view: View
+  setView: (view: View) => void
+  conversations: ConversationSession[]
+  selectedSessionId: string | null
+  setSelectedSessionId: (sessionId: string) => void
+  isLoading: boolean
+  createConversation: () => void
+  deleteConversation: (sessionId: string) => void
+  documentCount: number
+}) {
+  return (
+    <Sidebar collapsible="none" className="hidden border-r bg-sidebar/95 md:flex">
+      <SidebarHeader className="gap-4 p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-[0.68rem] font-semibold tracking-wide text-primary-foreground shadow-sm">
+            RAG
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold">{t.title}</div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="size-1.5 rounded-full bg-chart-2" />
+              <span className="truncate">{api.baseUrl}</span>
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            variant={view === "documents" ? "secondary" : "outline"}
+            size="sm"
+            className="justify-start"
+            onClick={() => setView("documents")}
+          >
+            <FileTextIcon data-icon="inline-start" />
+            {t.documents}
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            className="justify-start"
+            onClick={() => void createConversation()}
+          >
+            <PlusIcon data-icon="inline-start" />
+            {t.newChat}
+          </Button>
+        </div>
+        <div className="grid grid-cols-2 gap-2 rounded-xl border bg-background/70 p-2 text-xs">
+          <MiniMetric label={t.documentCount} value={documentCount} />
+          <MiniMetric label={t.workspace} value="local" />
+        </div>
+      </SidebarHeader>
+      <SidebarSeparator />
+      <SidebarContent>
+        <SidebarGroup className="gap-2 p-3">
+          <SidebarGroupLabel className="px-1 text-[0.68rem] uppercase tracking-[0.14em]">
+            {t.conversations}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            {isLoading ? (
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-10 rounded-xl" />
+                <Skeleton className="h-10 rounded-xl" />
+                <Skeleton className="h-10 rounded-xl" />
+              </div>
+            ) : conversations.length ? (
+              <SidebarMenu className="gap-1">
+                {conversations.map((session) => (
+                  <SidebarMenuItem key={session.session_id}>
+                    <SidebarMenuButton
+                      className="h-10 rounded-xl"
+                      isActive={selectedSessionId === session.session_id && view === "chat"}
+                      onClick={() => {
+                        setSelectedSessionId(session.session_id)
+                        setView("chat")
+                      }}
+                    >
+                      <MessageSquareIcon />
+                      <span>{session.title}</span>
+                    </SidebarMenuButton>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <SidebarMenuAction
+                          showOnHover
+                          className="top-2.5"
+                          onClick={() => void deleteConversation(session.session_id)}
+                        >
+                          <Trash2Icon />
+                          <span className="sr-only">{t.delete}</span>
+                        </SidebarMenuAction>
+                      </TooltipTrigger>
+                      <TooltipContent>{t.delete}</TooltipContent>
+                    </Tooltip>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            ) : (
+              <div className="rounded-xl border border-dashed bg-background/60 p-3 text-xs leading-5 text-muted-foreground">
+                {t.emptyDescription}
+              </div>
+            )}
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarSeparator />
+      <SidebarFooter className="p-3">
+        <SidebarMenu className="gap-1">
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              className="h-10 rounded-xl"
+              isActive={view === "settings"}
+              onClick={() => setView("settings")}
+            >
+              <SettingsIcon />
+              <span>{t.settings}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton className="h-10 rounded-xl">
+              <UserIcon />
+              <span>{t.account}</span>
+              <Badge variant="secondary" className="ml-auto">
+                {t.accountHint}
+              </Badge>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
+  )
+}
+
+function MobileHeader({
+  t,
+  setView,
+  createConversation,
+}: {
+  t: Record<string, string>
+  setView: (view: View) => void
+  createConversation: () => void
+}) {
+  return (
+    <header className="flex h-14 items-center gap-3 border-b bg-card/85 px-4 backdrop-blur md:hidden">
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button size="icon-sm" variant="ghost">
+            <MenuIcon />
+            <span className="sr-only">Menu</span>
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left">
+          <SheetHeader>
+            <SheetTitle>{t.title}</SheetTitle>
+            <SheetDescription>{t.subtitle}</SheetDescription>
+          </SheetHeader>
+          <div className="flex flex-col gap-2 px-4">
+            <Button variant="outline" onClick={() => setView("documents")}>
+              <FileTextIcon data-icon="inline-start" />
+              {t.documents}
+            </Button>
+            <Button variant="default" onClick={() => void createConversation()}>
+              <PlusIcon data-icon="inline-start" />
+              {t.newChat}
+            </Button>
+            <Button variant="outline" onClick={() => setView("settings")}>
+              <SettingsIcon data-icon="inline-start" />
+              {t.settings}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+      <div className="min-w-0">
+        <div className="truncate text-sm font-semibold">{t.title}</div>
+        <div className="truncate text-xs text-muted-foreground">{t.subtitle}</div>
+      </div>
+    </header>
+  )
+}
+
 function ChatView({
   t,
   messages,
@@ -634,7 +755,10 @@ function ChatView({
   setQuestion,
   sendQuestion,
   isSending,
-  selectedSessionId,
+  selectedSession,
+  conversations,
+  documents,
+  indexedChunks,
 }: {
   t: Record<string, string>
   messages: ConversationMessage[]
@@ -642,70 +766,110 @@ function ChatView({
   setQuestion: (value: string) => void
   sendQuestion: () => void
   isSending: boolean
-  selectedSessionId: string | null
+  selectedSession?: ConversationSession
+  conversations: ConversationSession[]
+  documents: DocumentRecord[]
+  indexedChunks: number
 }) {
   return (
-    <div className="mx-auto flex h-svh max-w-4xl flex-col px-4 py-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-medium">{t.title}</h1>
-          <p className="truncate text-sm text-muted-foreground">{t.subtitle}</p>
-        </div>
-        {selectedSessionId && (
-          <Badge variant="secondary" className="hidden sm:inline-flex">
-            {selectedSessionId.slice(0, 12)}
-          </Badge>
-        )}
+    <div className="mx-auto flex h-svh max-w-5xl flex-col px-4 py-5 lg:px-8">
+      <PageHeader
+        title={t.title}
+        description={t.subtitle}
+        badge={selectedSession?.session_id.slice(0, 12) ?? t.ready}
+      />
+      <div className="mb-4 grid gap-3 md:grid-cols-3">
+        <StatCard icon={MessageSquareIcon} label={t.messageCount} value={messages.length} />
+        <StatCard icon={FileTextIcon} label={t.documentCount} value={documents.length} />
+        <StatCard icon={Layers3Icon} label={t.indexedChunks} value={indexedChunks} />
       </div>
-      <ScrollArea className="min-h-0 flex-1 pr-2">
-        {messages.length ? (
-          <div className="flex flex-col gap-4 pb-4">
-            {messages.map((message) => (
-              <MessageBubble key={message.message_id} message={message} />
-            ))}
-            {isSending && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2Icon className="animate-spin" />
-                Thinking
-              </div>
-            )}
+      <div className="rag-panel rag-soft-border flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border">
+        <ScrollArea className="min-h-0 flex-1">
+          {messages.length ? (
+            <div className="flex flex-col gap-4 p-4 md:p-6">
+              {messages.map((message) => (
+                <MessageBubble key={message.message_id} message={message} />
+              ))}
+              {isSending && (
+                <div className="flex items-center gap-2 rounded-full border bg-background/70 px-3 py-2 text-sm text-muted-foreground">
+                  <Loader2Icon className="animate-spin" />
+                  Thinking
+                </div>
+              )}
+            </div>
+          ) : (
+            <EmptyChat t={t} conversations={conversations.length} documents={documents.length} />
+          )}
+        </ScrollArea>
+        <div className="border-t bg-card/80 p-3 backdrop-blur">
+          <div className="flex items-end gap-2 rounded-2xl border bg-background p-2 shadow-sm">
+            <Textarea
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault()
+                  void sendQuestion()
+                }
+              }}
+              placeholder={t.inputPlaceholder}
+              className="max-h-40 min-h-11 resize-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-0"
+            />
+            <Button
+              size="icon-lg"
+              disabled={!question.trim() || isSending}
+              onClick={() => void sendQuestion()}
+            >
+              {isSending ? <Loader2Icon className="animate-spin" /> : <SendIcon />}
+              <span className="sr-only">{t.send}</span>
+            </Button>
           </div>
-        ) : (
-          <div className="flex h-[60svh] items-center justify-center">
-            <Empty>
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <BotIcon />
-                </EmptyMedia>
-                <EmptyTitle>{t.emptyTitle}</EmptyTitle>
-                <EmptyDescription>{t.emptyDescription}</EmptyDescription>
-              </EmptyHeader>
-            </Empty>
+          <div className="mt-2 flex items-center gap-2 px-1 text-xs text-muted-foreground">
+            <SparklesIcon />
+            <span>{t.askHint}</span>
           </div>
-        )}
-      </ScrollArea>
-      <div className="border-t pt-3">
-        <div className="flex items-end gap-2 rounded-xl border bg-card p-2 shadow-sm">
-          <Textarea
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault()
-                void sendQuestion()
-              }
-            }}
-            placeholder={t.inputPlaceholder}
-            className="max-h-40 min-h-11 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
-          />
-          <Button
-            size="icon-lg"
-            disabled={!question.trim() || isSending}
-            onClick={() => void sendQuestion()}
-          >
-            {isSending ? <Loader2Icon className="animate-spin" /> : <SendIcon />}
-            <span className="sr-only">{t.send}</span>
-          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function EmptyChat({
+  t,
+  conversations,
+  documents,
+}: {
+  t: Record<string, string>
+  conversations: number
+  documents: number
+}) {
+  return (
+    <div className="grid min-h-[28rem] place-items-center p-6">
+      <div className="max-w-xl text-center">
+        <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl bg-accent text-accent-foreground shadow-sm">
+          <BotIcon />
+        </div>
+        <h2 className="text-xl font-semibold tracking-tight">{t.emptyTitle}</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+          {t.emptyDescription}
+        </p>
+        <div className="mt-5 grid gap-2 text-left sm:grid-cols-3">
+          {[t.promptOne, t.promptTwo, t.promptThree].map((prompt) => (
+            <div
+              key={prompt}
+              className="rounded-xl border bg-background/75 p-3 text-xs leading-5 text-muted-foreground"
+            >
+              {prompt}
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 flex justify-center gap-2">
+          <Badge variant="secondary">
+            {t.conversations}: {conversations}
+          </Badge>
+          <Badge variant="secondary">
+            {t.documents}: {documents}
+          </Badge>
         </div>
       </div>
     </div>
@@ -715,13 +879,19 @@ function ChatView({
 function MessageBubble({ message }: { message: ConversationMessage }) {
   const isUser = message.role === "user"
   return (
-    <div className={isUser ? "flex justify-end" : "flex justify-start"}>
+    <div className={cn("flex gap-3", isUser ? "justify-end" : "justify-start")}>
+      {!isUser && (
+        <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
+          <BotIcon />
+        </div>
+      )}
       <div
-        className={
+        className={cn(
+          "max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm",
           isUser
-            ? "max-w-[82%] rounded-xl bg-primary px-3 py-2 text-sm leading-6 text-primary-foreground"
-            : "max-w-[82%] rounded-xl border bg-card px-3 py-2 text-sm leading-6 shadow-sm"
-        }
+            ? "bg-primary text-primary-foreground"
+            : "border bg-card text-card-foreground"
+        )}
       >
         {message.content}
       </div>
@@ -732,6 +902,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
 function DocumentsView({
   t,
   documents,
+  indexedChunks,
   isUploading,
   fileInputRef,
   uploadFiles,
@@ -740,6 +911,7 @@ function DocumentsView({
 }: {
   t: Record<string, string>
   documents: DocumentRecord[]
+  indexedChunks: number
   isUploading: boolean
   fileInputRef: React.RefObject<HTMLInputElement | null>
   uploadFiles: (files: FileList | null) => void
@@ -747,120 +919,142 @@ function DocumentsView({
   reindexDocument: (documentId: string) => void
 }) {
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-medium">{t.documents}</h1>
-          <p className="text-sm text-muted-foreground">{t.noDocumentsDesc}</p>
-        </div>
-        <div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept=".pdf,.docx,.md,.markdown,.txt"
-            className="hidden"
-            onChange={(event) => void uploadFiles(event.target.files)}
-          />
-          <Button
-            disabled={isUploading}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {isUploading ? (
-              <Loader2Icon data-icon="inline-start" className="animate-spin" />
-            ) : (
-              <UploadIcon data-icon="inline-start" />
-            )}
-            {t.upload}
-          </Button>
-        </div>
+    <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-5 lg:px-8">
+      <PageHeader
+        title={t.documents}
+        description={t.uploadHint}
+        badge={`${documents.length} ${t.documentCount}`}
+      />
+      <div className="grid gap-3 md:grid-cols-3">
+        <StatCard icon={FileTextIcon} label={t.documentCount} value={documents.length} />
+        <StatCard icon={Layers3Icon} label={t.indexedChunks} value={indexedChunks} />
+        <StatCard icon={HardDriveIcon} label={t.localVector} value="Chroma" />
       </div>
-      {documents.length ? (
-        <div className="overflow-hidden rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t.filename}</TableHead>
-                <TableHead>{t.status}</TableHead>
-                <TableHead>{t.parse}</TableHead>
-                <TableHead>{t.index}</TableHead>
-                <TableHead>{t.chunks}</TableHead>
-                <TableHead className="text-right">{t.actions}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {documents.map((document) => (
-                <TableRow key={document.document_id}>
-                  <TableCell>
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <span className="truncate font-medium">
-                        {document.original_filename}
-                      </span>
-                      <span className="truncate text-xs text-muted-foreground">
-                        {document.document_id}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge value={document.status} />
-                  </TableCell>
-                  <TableCell>{document.parse_status}</TableCell>
-                  <TableCell>{document.index_status}</TableCell>
-                  <TableCell>{document.chunk_count}</TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-2">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon-sm"
-                            onClick={() => void reindexDocument(document.document_id)}
-                          >
-                            <RefreshCwIcon />
-                            <span className="sr-only">{t.reindex}</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{t.reindex}</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="destructive"
-                            size="icon-sm"
-                            onClick={() => void deleteDocument(document.document_id)}
-                          >
-                            <Trash2Icon />
-                            <span className="sr-only">{t.delete}</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{t.delete}</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <div className="flex h-[60svh] items-center justify-center rounded-lg border">
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <FileTextIcon />
-              </EmptyMedia>
-              <EmptyTitle>{t.noDocuments}</EmptyTitle>
-              <EmptyDescription>{t.noDocumentsDesc}</EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button onClick={() => fileInputRef.current?.click()}>
+      <Card className="rag-panel rag-soft-border">
+        <CardHeader className="gap-3 sm:flex sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle>{t.documents}</CardTitle>
+            <CardDescription>{t.noDocumentsDesc}</CardDescription>
+          </div>
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.docx,.md,.markdown,.txt"
+              className="hidden"
+              onChange={(event) => void uploadFiles(event.target.files)}
+            />
+            <Button disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
+              {isUploading ? (
+                <Loader2Icon data-icon="inline-start" className="animate-spin" />
+              ) : (
                 <UploadIcon data-icon="inline-start" />
-                {t.upload}
-              </Button>
-            </EmptyContent>
-          </Empty>
-        </div>
-      )}
+              )}
+              {t.upload}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {documents.length ? (
+            <div className="overflow-hidden rounded-xl border bg-background/65">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/60">
+                    <TableHead>{t.filename}</TableHead>
+                    <TableHead>{t.status}</TableHead>
+                    <TableHead>{t.parse}</TableHead>
+                    <TableHead>{t.index}</TableHead>
+                    <TableHead>{t.chunks}</TableHead>
+                    <TableHead className="text-right">{t.actions}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {documents.map((document) => (
+                    <TableRow key={document.document_id}>
+                      <TableCell>
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
+                            <FileTextIcon />
+                          </div>
+                          <div className="flex min-w-0 flex-col gap-1">
+                            <span className="truncate font-medium">
+                              {document.original_filename}
+                            </span>
+                            <span className="truncate text-xs text-muted-foreground">
+                              {document.document_id}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge value={document.status} />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {document.parse_status}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {document.index_status}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{document.chunk_count}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon-sm"
+                                onClick={() => void reindexDocument(document.document_id)}
+                              >
+                                <RefreshCwIcon />
+                                <span className="sr-only">{t.reindex}</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t.reindex}</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="destructive"
+                                size="icon-sm"
+                                onClick={() => void deleteDocument(document.document_id)}
+                              >
+                                <Trash2Icon />
+                                <span className="sr-only">{t.delete}</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t.delete}</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="grid min-h-[24rem] place-items-center rounded-xl border border-dashed bg-background/55">
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <FileTextIcon />
+                  </EmptyMedia>
+                  <EmptyTitle>{t.noDocuments}</EmptyTitle>
+                  <EmptyDescription>{t.noDocumentsDesc}</EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button onClick={() => fileInputRef.current?.click()}>
+                    <UploadIcon data-icon="inline-start" />
+                    {t.upload}
+                  </Button>
+                </EmptyContent>
+              </Empty>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -887,26 +1081,23 @@ function SettingsView({
   testModel: (kind: "chat" | "embedding") => void
 }) {
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-5">
-      <div>
-        <h1 className="text-lg font-medium">{t.settings}</h1>
-        <p className="text-sm text-muted-foreground">{t.beginnerHint}</p>
-      </div>
-      <div className="grid gap-5 lg:grid-cols-[1fr_18rem]">
+    <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-5 lg:px-8">
+      <PageHeader title={t.settings} description={t.beginnerHint} badge={t.ready} />
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Tabs defaultValue="model" className="min-w-0">
-          <TabsList>
+          <TabsList className="mb-3">
             <TabsTrigger value="model">{t.modelSettings}</TabsTrigger>
             <TabsTrigger value="limits">{t.retrievalSettings}</TabsTrigger>
           </TabsList>
           <TabsContent value="model">
-            <Card>
+            <Card className="rag-panel rag-soft-border">
               <CardHeader>
                 <CardTitle>{t.modelSettings}</CardTitle>
                 <CardDescription>{t.beginnerHint}</CardDescription>
               </CardHeader>
               <CardContent>
-                <FieldGroup>
-                  <Field>
+                <FieldGroup className="grid gap-4 md:grid-cols-2">
+                  <Field className="md:col-span-2">
                     <FieldLabel htmlFor="chat-base-url">{t.chatBaseUrl}</FieldLabel>
                     <Input
                       id="chat-base-url"
@@ -946,7 +1137,9 @@ function SettingsView({
                       }
                     />
                   </Field>
-                  <Separator />
+                  <div className="md:col-span-2">
+                    <Separator />
+                  </div>
                   <Field>
                     <FieldLabel>{t.embeddingProvider}</FieldLabel>
                     <Select
@@ -976,6 +1169,19 @@ function SettingsView({
                         </SelectGroup>
                       </SelectContent>
                     </Select>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="embedding-model">{t.embeddingModel}</FieldLabel>
+                    <Input
+                      id="embedding-model"
+                      value={config.embedding.model}
+                      onChange={(event) =>
+                        setConfig((current) => ({
+                          ...current,
+                          embedding: { ...current.embedding, model: event.target.value },
+                        }))
+                      }
+                    />
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="embedding-base-url">
@@ -1014,33 +1220,21 @@ function SettingsView({
                       }
                     />
                   </Field>
-                  <Field>
-                    <FieldLabel htmlFor="embedding-model">{t.embeddingModel}</FieldLabel>
-                    <Input
-                      id="embedding-model"
-                      value={config.embedding.model}
-                      onChange={(event) =>
-                        setConfig((current) => ({
-                          ...current,
-                          embedding: { ...current.embedding, model: event.target.value },
-                        }))
-                      }
-                    />
-                  </Field>
                 </FieldGroup>
               </CardContent>
             </Card>
           </TabsContent>
           <TabsContent value="limits">
-            <Card>
+            <Card className="rag-panel rag-soft-border">
               <CardHeader>
                 <CardTitle>{t.retrievalSettings}</CardTitle>
                 <CardDescription>{t.beginnerHint}</CardDescription>
               </CardHeader>
               <CardContent>
-                <FieldGroup>
+                <FieldGroup className="grid gap-4 md:grid-cols-2">
                   <NumberField
                     id="top-k"
+                    icon={SearchIcon}
                     label={t.topK}
                     description="Controls how many context chunks are retrieved."
                     value={config.retrieval.top_k}
@@ -1054,6 +1248,7 @@ function SettingsView({
                   />
                   <NumberField
                     id="batch-size"
+                    icon={Layers3Icon}
                     label={t.batchSize}
                     description="Controls how many text chunks are embedded per batch."
                     value={config.embedding.batch_size}
@@ -1067,6 +1262,7 @@ function SettingsView({
                   />
                   <NumberField
                     id="max-concurrency"
+                    icon={GaugeIcon}
                     label={t.maxConcurrency}
                     description="Local services and low-resource computers should usually stay at 1."
                     value={config.embedding.max_concurrency}
@@ -1080,6 +1276,7 @@ function SettingsView({
                   />
                   <NumberField
                     id="interval"
+                    icon={Clock3Icon}
                     label={t.interval}
                     description={t.beginnerHint}
                     value={config.embedding.batch_interval_seconds}
@@ -1101,7 +1298,7 @@ function SettingsView({
           </TabsContent>
         </Tabs>
         <div className="flex flex-col gap-4">
-          <Card>
+          <Card className="rag-panel rag-soft-border">
             <CardHeader>
               <CardTitle>{t.language}</CardTitle>
             </CardHeader>
@@ -1119,19 +1316,19 @@ function SettingsView({
               </Select>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="rag-panel rag-soft-border">
             <CardHeader>
               <CardTitle>{t.account}</CardTitle>
               <CardDescription>{t.accountHint}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-3 rounded-xl border bg-background/70 p-3 text-sm text-muted-foreground">
                 <UserIcon />
                 Future sign-in and account settings will live here.
               </div>
             </CardContent>
           </Card>
-          <FieldSet>
+          <FieldSet className="rounded-2xl border bg-card/85 p-3 shadow-sm">
             <Button onClick={() => void saveConfig()}>
               <CheckIcon data-icon="inline-start" />
               {t.save}
@@ -1166,8 +1363,64 @@ function SettingsView({
   )
 }
 
+function PageHeader({
+  title,
+  description,
+  badge,
+}: {
+  title: string
+  description: string
+  badge: string
+}) {
+  return (
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
+        <h1 className="truncate text-2xl font-semibold tracking-tight">{title}</h1>
+        <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+          {description}
+        </p>
+      </div>
+      <Badge variant="secondary" className="mt-1">
+        {badge}
+      </Badge>
+    </div>
+  )
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ElementType
+  label: string
+  value: React.ReactNode
+}) {
+  return (
+    <div className="rag-soft-border flex items-center gap-3 rounded-2xl border bg-card/70 p-3 shadow-sm">
+      <div className="flex size-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
+        <Icon />
+      </div>
+      <div className="min-w-0">
+        <div className="truncate text-xs text-muted-foreground">{label}</div>
+        <div className="truncate text-sm font-semibold">{value}</div>
+      </div>
+    </div>
+  )
+}
+
+function MiniMetric({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <div className="truncate text-muted-foreground">{label}</div>
+      <div className="truncate font-semibold text-foreground">{value}</div>
+    </div>
+  )
+}
+
 function NumberField({
   id,
+  icon: Icon,
   label,
   description,
   value,
@@ -1176,6 +1429,7 @@ function NumberField({
   onChange,
 }: {
   id: string
+  icon: React.ElementType
   label: string
   description: string
   value: number
@@ -1184,17 +1438,25 @@ function NumberField({
   onChange: (value: number) => void
 }) {
   return (
-    <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Input
-        id={id}
-        type="number"
-        min={min}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-      />
-      <FieldDescription>{description}</FieldDescription>
+    <Field className="rounded-xl border bg-background/70 p-3">
+      <div className="flex items-start gap-3">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
+          <Icon />
+        </div>
+        <div className="min-w-0 flex-1">
+          <FieldLabel htmlFor={id}>{label}</FieldLabel>
+          <Input
+            id={id}
+            type="number"
+            min={min}
+            step={step}
+            value={value}
+            onChange={(event) => onChange(Number(event.target.value))}
+            className="mt-2"
+          />
+          <FieldDescription className="mt-2">{description}</FieldDescription>
+        </div>
+      </div>
     </Field>
   )
 }
