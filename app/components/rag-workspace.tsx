@@ -2,13 +2,18 @@
 
 import * as React from "react"
 import {
+  AlertTriangleIcon,
   BotIcon,
   CheckIcon,
+  CheckCircle2Icon,
   Clock3Icon,
+  CommandIcon,
   DatabaseIcon,
   FileTextIcon,
   GaugeIcon,
   HardDriveIcon,
+  HistoryIcon,
+  InfoIcon,
   Layers3Icon,
   Loader2Icon,
   MenuIcon,
@@ -22,6 +27,7 @@ import {
   Trash2Icon,
   UploadIcon,
   UserIcon,
+  XCircleIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -69,14 +75,6 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -111,6 +109,7 @@ import {
 
 type View = "chat" | "documents" | "settings"
 type Language = "zh" | "en"
+type StatusTone = "success" | "warning" | "destructive" | "neutral"
 
 const text = {
   zh: {
@@ -173,6 +172,53 @@ const text = {
     promptOne: "这份资料的核心结论是什么？",
     promptTwo: "根据知识库给我一个简短答案。",
     promptThree: "当前会话里我们确认了哪些事项？",
+    primaryNav: "主要功能",
+    systemStatus: "系统状态",
+    apiEndpoint: "API 地址",
+    connected: "已连接",
+    disconnected: "未连接",
+    knowledgeReady: "知识库就绪",
+    noSession: "未选择会话",
+    startChat: "开始提问",
+    openDocuments: "管理文档",
+    configured: "已配置",
+    notConfigured: "待配置",
+    duplicate: "重复资料",
+    processed: "已处理",
+    pending: "处理中",
+    failed: "失败",
+    clean: "正常",
+    documentLibrary: "资料库",
+    documentLibraryDesc: "上传、去重、解析并写入本地 Chroma 向量库。",
+    uploadCta: "选择文件",
+    uploadBusy: "正在处理",
+    reindexHint: "重新解析并更新向量索引",
+    deleteHint: "删除文档及其向量数据",
+    sourceStatus: "资料状态",
+    storageStatus: "存储状态",
+    fileId: "文档 ID",
+    fileType: "类型",
+    duplicateOf: "重复来源",
+    noSelection: "新会话",
+    composerHint: "Enter 发送，Shift + Enter 换行",
+    thinking: "正在生成回答",
+    quickPrompts: "快捷问题",
+    operational: "运行正常",
+    settingsActions: "配置操作",
+    providerSettings: "Provider 与模型",
+    chatSettings: "聊天模型",
+    embeddingSettings: "向量模型",
+    limitDescription: "控制检索数量、批量向量化和本地模型资源占用。",
+    presetDescription: "根据机器资源快速套用推荐参数。",
+    testDescription: "保存前可先测试模型服务连通性。",
+    accountPlaceholder: "未来的登录、权限和用户偏好将放在这里。",
+    saveFirst: "保存后立即对后端生效",
+    stableDescription: "适合本地模型与普通电脑",
+    cloudDescription: "适合云端 API 与稳定网络",
+    lowDescription: "适合低内存或低性能设备",
+    refresh: "刷新",
+    retry: "重试",
+    activity: "工作区概览",
   },
   en: {
     title: "RAG Knowledge App",
@@ -238,6 +284,53 @@ const text = {
     promptOne: "What is the core conclusion of this document?",
     promptTwo: "Give me a concise answer from the knowledge base.",
     promptThree: "What have we confirmed in this conversation?",
+    primaryNav: "Primary",
+    systemStatus: "System status",
+    apiEndpoint: "API endpoint",
+    connected: "Connected",
+    disconnected: "Disconnected",
+    knowledgeReady: "Knowledge ready",
+    noSession: "No session selected",
+    startChat: "Start asking",
+    openDocuments: "Manage documents",
+    configured: "Configured",
+    notConfigured: "Needs setup",
+    duplicate: "Duplicate",
+    processed: "Processed",
+    pending: "Processing",
+    failed: "Failed",
+    clean: "Healthy",
+    documentLibrary: "Document library",
+    documentLibraryDesc: "Upload, deduplicate, parse, and index into local Chroma.",
+    uploadCta: "Choose files",
+    uploadBusy: "Processing",
+    reindexHint: "Parse again and refresh vector indexes",
+    deleteHint: "Delete the document and its vectors",
+    sourceStatus: "Source status",
+    storageStatus: "Storage status",
+    fileId: "Document ID",
+    fileType: "Type",
+    duplicateOf: "Duplicate of",
+    noSelection: "New session",
+    composerHint: "Enter to send, Shift + Enter for a new line",
+    thinking: "Generating answer",
+    quickPrompts: "Quick prompts",
+    operational: "Operational",
+    settingsActions: "Configuration actions",
+    providerSettings: "Providers and models",
+    chatSettings: "Chat model",
+    embeddingSettings: "Embedding model",
+    limitDescription: "Control retrieval count, embedding batches, and local model usage.",
+    presetDescription: "Apply recommended settings for the current machine profile.",
+    testDescription: "Test model connectivity before saving.",
+    accountPlaceholder: "Future sign-in, permissions, and preferences will live here.",
+    saveFirst: "Saved settings take effect immediately",
+    stableDescription: "Best for local models and everyday machines",
+    cloudDescription: "Best for cloud APIs and stable networks",
+    lowDescription: "Best for low-memory or low-resource devices",
+    refresh: "Refresh",
+    retry: "Retry",
+    activity: "Workspace overview",
   },
 } satisfies Record<Language, Record<string, string>>
 
@@ -268,6 +361,7 @@ export function RagWorkspace() {
   const [isSending, setIsSending] = React.useState(false)
   const [isUploading, setIsUploading] = React.useState(false)
   const [apiError, setApiError] = React.useState<string | null>(null)
+  const [isMobileNavOpen, setIsMobileNavOpen] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement | null>(null)
   const t = text[language]
 
@@ -278,6 +372,8 @@ export function RagWorkspace() {
     (total, document) => total + (document.chunk_count || 0),
     0
   )
+  const isModelConfigured = Boolean(config.chat.base_url && config.chat.model)
+  const readyState = isModelConfigured ? t.configured : t.notConfigured
 
   const loadWorkspace = React.useCallback(async () => {
     setApiError(null)
@@ -378,6 +474,10 @@ export function RagWorkspace() {
     } finally {
       setIsSending(false)
     }
+  }
+
+  function applyPrompt(prompt: string) {
+    setQuestion(prompt)
   }
 
   async function uploadFiles(files: FileList | null) {
@@ -489,7 +589,19 @@ export function RagWorkspace() {
     <SidebarProvider>
       {sidebar}
       <SidebarInset className="rag-workbench-bg">
-        <MobileHeader t={t} setView={setView} createConversation={createConversation} />
+        <MobileHeader
+          t={t}
+          view={view}
+          setView={(nextView) => {
+            setView(nextView)
+            setIsMobileNavOpen(false)
+          }}
+          createConversation={createConversation}
+          documentCount={documents.length}
+          readyState={readyState}
+          open={isMobileNavOpen}
+          onOpenChange={setIsMobileNavOpen}
+        />
         {apiError ? (
           <main className="flex min-h-svh items-center justify-center p-6">
             <Empty className="rounded-2xl border bg-card/80 p-8 shadow-sm">
@@ -524,6 +636,8 @@ export function RagWorkspace() {
                 conversations={conversations}
                 documents={documents}
                 indexedChunks={indexedChunks}
+                isModelConfigured={isModelConfigured}
+                onPromptSelect={applyPrompt}
               />
             )}
             {view === "documents" && (
@@ -536,6 +650,7 @@ export function RagWorkspace() {
                 uploadFiles={uploadFiles}
                 deleteDocument={deleteDocument}
                 reindexDocument={reindexDocument}
+                isModelConfigured={isModelConfigured}
               />
             )}
             {view === "settings" && (
@@ -549,6 +664,9 @@ export function RagWorkspace() {
                 resetConfig={resetConfig}
                 applyPreset={applyPreset}
                 testModel={testModel}
+                documents={documents}
+                indexedChunks={indexedChunks}
+                isModelConfigured={isModelConfigured}
               />
             )}
           </main>
@@ -581,50 +699,95 @@ function WorkspaceSidebar({
   deleteConversation: (sessionId: string) => void
   documentCount: number
 }) {
+  const navItems = [
+    {
+      value: "chat" as const,
+      label: t.startChat,
+      icon: MessageSquareIcon,
+      meta: conversations.length,
+    },
+    {
+      value: "documents" as const,
+      label: t.documents,
+      icon: FileTextIcon,
+      meta: documentCount,
+    },
+    {
+      value: "settings" as const,
+      label: t.settings,
+      icon: SettingsIcon,
+      meta: null,
+    },
+  ]
+
   return (
     <Sidebar collapsible="none" className="hidden border-r bg-sidebar/95 md:flex">
       <SidebarHeader className="gap-4 p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-[0.68rem] font-semibold tracking-wide text-primary-foreground shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-[0.68rem] font-semibold tracking-wide text-primary-foreground shadow-sm">
             RAG
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold">{t.title}</div>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span className="size-1.5 rounded-full bg-chart-2" />
-              <span className="truncate">{api.baseUrl}</span>
+              <span className="truncate">{t.connected}</span>
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant={view === "documents" ? "secondary" : "outline"}
-            size="sm"
-            className="justify-start"
-            onClick={() => setView("documents")}
-          >
-            <FileTextIcon data-icon="inline-start" />
-            {t.documents}
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            className="justify-start"
-            onClick={() => void createConversation()}
-          >
+        <Button
+          variant="default"
+          size="lg"
+          className="w-full justify-start"
+          onClick={() => void createConversation()}
+        >
             <PlusIcon data-icon="inline-start" />
             {t.newChat}
-          </Button>
-        </div>
-        <div className="grid grid-cols-2 gap-2 rounded-xl border bg-background/70 p-2 text-xs">
-          <MiniMetric label={t.documentCount} value={documentCount} />
-          <MiniMetric label={t.workspace} value="local" />
+        </Button>
+        <div className="rounded-lg border bg-background/75 p-3 text-xs shadow-sm">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="font-medium text-foreground">{t.systemStatus}</span>
+            <StatusPill tone="success" label={t.operational} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <MiniMetric label={t.documentCount} value={documentCount} />
+            <MiniMetric label={t.workspace} value="local" />
+          </div>
+          <div className="mt-3 truncate text-muted-foreground">{api.baseUrl}</div>
         </div>
       </SidebarHeader>
       <SidebarSeparator />
       <SidebarContent>
         <SidebarGroup className="gap-2 p-3">
-          <SidebarGroupLabel className="px-1 text-[0.68rem] uppercase tracking-[0.14em]">
+          <SidebarGroupLabel className="px-1 text-[0.68rem] uppercase tracking-normal">
+            {t.primaryNav}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">
+              {navItems.map((item) => (
+                <SidebarMenuItem key={item.value}>
+                  <SidebarMenuButton
+                    className="h-10 rounded-lg"
+                    isActive={view === item.value}
+                    data-testid={`nav-${item.value}`}
+                    onClick={() => setView(item.value)}
+                  >
+                    <item.icon />
+                    <span>{item.label}</span>
+                    {item.meta !== null && (
+                      <Badge variant="secondary" className="ml-auto">
+                        {item.meta}
+                      </Badge>
+                    )}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarSeparator />
+        <SidebarGroup className="gap-2 p-3">
+          <SidebarGroupLabel className="px-1 text-[0.68rem] uppercase tracking-normal">
             {t.conversations}
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -639,15 +802,15 @@ function WorkspaceSidebar({
                 {conversations.map((session) => (
                   <SidebarMenuItem key={session.session_id}>
                     <SidebarMenuButton
-                      className="h-10 rounded-xl"
+                      className="h-11 rounded-lg"
                       isActive={selectedSessionId === session.session_id && view === "chat"}
                       onClick={() => {
                         setSelectedSessionId(session.session_id)
                         setView("chat")
                       }}
                     >
-                      <MessageSquareIcon />
-                      <span>{session.title}</span>
+                      <HistoryIcon />
+                      <span>{session.title || t.noSelection}</span>
                     </SidebarMenuButton>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -666,7 +829,7 @@ function WorkspaceSidebar({
                 ))}
               </SidebarMenu>
             ) : (
-              <div className="rounded-xl border border-dashed bg-background/60 p-3 text-xs leading-5 text-muted-foreground">
+              <div className="rounded-lg border border-dashed bg-background/60 p-3 text-xs leading-5 text-muted-foreground">
                 {t.emptyDescription}
               </div>
             )}
@@ -677,17 +840,7 @@ function WorkspaceSidebar({
       <SidebarFooter className="p-3">
         <SidebarMenu className="gap-1">
           <SidebarMenuItem>
-            <SidebarMenuButton
-              className="h-10 rounded-xl"
-              isActive={view === "settings"}
-              onClick={() => setView("settings")}
-            >
-              <SettingsIcon />
-              <span>{t.settings}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton className="h-10 rounded-xl">
+            <SidebarMenuButton className="h-10 rounded-lg">
               <UserIcon />
               <span>{t.account}</span>
               <Badge variant="secondary" className="ml-auto">
@@ -703,47 +856,90 @@ function WorkspaceSidebar({
 
 function MobileHeader({
   t,
+  view,
   setView,
   createConversation,
+  documentCount,
+  readyState,
+  open,
+  onOpenChange,
 }: {
   t: Record<string, string>
+  view: View
   setView: (view: View) => void
   createConversation: () => void
+  documentCount: number
+  readyState: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }) {
+  const navItems = [
+    { value: "chat" as const, label: t.startChat, icon: MessageSquareIcon },
+    { value: "documents" as const, label: t.documents, icon: FileTextIcon },
+    { value: "settings" as const, label: t.settings, icon: SettingsIcon },
+  ]
+
   return (
-    <header className="flex h-14 items-center gap-3 border-b bg-card/85 px-4 backdrop-blur md:hidden">
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button size="icon-sm" variant="ghost">
-            <MenuIcon />
-            <span className="sr-only">Menu</span>
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left">
-          <SheetHeader>
-            <SheetTitle>{t.title}</SheetTitle>
-            <SheetDescription>{t.subtitle}</SheetDescription>
-          </SheetHeader>
-          <div className="flex flex-col gap-2 px-4">
-            <Button variant="outline" onClick={() => setView("documents")}>
-              <FileTextIcon data-icon="inline-start" />
-              {t.documents}
-            </Button>
-            <Button variant="default" onClick={() => void createConversation()}>
-              <PlusIcon data-icon="inline-start" />
-              {t.newChat}
-            </Button>
-            <Button variant="outline" onClick={() => setView("settings")}>
-              <SettingsIcon data-icon="inline-start" />
-              {t.settings}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
-      <div className="min-w-0">
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-card/90 px-4 backdrop-blur md:hidden">
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        aria-expanded={open}
+        onClick={() => onOpenChange(!open)}
+      >
+        <MenuIcon />
+        <span className="sr-only">Menu</span>
+      </Button>
+      <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-semibold">{t.title}</div>
         <div className="truncate text-xs text-muted-foreground">{t.subtitle}</div>
       </div>
+      <StatusPill tone="success" label={t.connected} />
+      {open && (
+        <div className="absolute inset-x-3 top-[4.25rem] z-30 rounded-xl border bg-popover p-3 text-popover-foreground shadow-xl">
+          <div className="mb-3">
+            <div className="truncate text-sm font-semibold">{t.title}</div>
+            <div className="truncate text-xs text-muted-foreground">{t.subtitle}</div>
+          </div>
+          <div className="flex flex-col gap-3">
+            <Button
+              variant="default"
+              className="justify-start"
+              onClick={() => {
+                void createConversation()
+                onOpenChange(false)
+              }}
+            >
+              <PlusIcon data-icon="inline-start" />
+              {t.newChat}
+            </Button>
+            <div className="grid gap-2">
+              {navItems.map((item) => (
+                <Button
+                  key={item.value}
+                  variant={view === item.value ? "secondary" : "outline"}
+                  className="justify-start"
+                  data-testid={`mobile-nav-${item.value}`}
+                  onClick={() => setView(item.value)}
+                >
+                  <item.icon data-icon="inline-start" />
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+            <div className="rounded-lg border bg-background/70 p-3 text-xs text-muted-foreground">
+              <div className="flex items-center justify-between gap-2">
+                <span>{t.documentCount}</span>
+                <span className="font-medium text-foreground">{documentCount}</span>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span>{t.modelSettings}</span>
+                <span className="font-medium text-foreground">{readyState}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   )
 }
@@ -759,6 +955,8 @@ function ChatView({
   conversations,
   documents,
   indexedChunks,
+  isModelConfigured,
+  onPromptSelect,
 }: {
   t: Record<string, string>
   messages: ConversationMessage[]
@@ -770,20 +968,47 @@ function ChatView({
   conversations: ConversationSession[]
   documents: DocumentRecord[]
   indexedChunks: number
+  isModelConfigured: boolean
+  onPromptSelect: (prompt: string) => void
 }) {
+  const sessionBadge = selectedSession?.session_id.slice(0, 8) ?? t.noSelection
+
   return (
-    <div className="mx-auto flex h-svh max-w-5xl flex-col px-4 py-5 lg:px-8">
+    <div className="mx-auto flex h-[calc(100svh-4rem)] max-w-6xl flex-col px-4 py-5 md:h-svh lg:px-8">
       <PageHeader
         title={t.title}
         description={t.subtitle}
-        badge={selectedSession?.session_id.slice(0, 12) ?? t.ready}
+        badge={sessionBadge}
+        actions={
+          <div className="flex flex-wrap justify-end gap-2">
+            <StatusPill
+              tone={isModelConfigured ? "success" : "warning"}
+              label={isModelConfigured ? t.configured : t.notConfigured}
+            />
+            <StatusPill tone={documents.length ? "success" : "neutral"} label={t.knowledgeReady} />
+          </div>
+        }
       />
       <div className="mb-4 grid gap-3 md:grid-cols-3">
         <StatCard icon={MessageSquareIcon} label={t.messageCount} value={messages.length} />
         <StatCard icon={FileTextIcon} label={t.documentCount} value={documents.length} />
         <StatCard icon={Layers3Icon} label={t.indexedChunks} value={indexedChunks} />
       </div>
-      <div className="rag-panel rag-soft-border flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border">
+      <div className="rag-panel rag-soft-border flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-card/70 px-4 py-3">
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium">
+              {selectedSession?.title || t.noSelection}
+            </div>
+            <div className="mt-0.5 truncate text-xs text-muted-foreground">
+              {t.askHint}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <CommandIcon />
+            <span>{t.composerHint}</span>
+          </div>
+        </div>
         <ScrollArea className="min-h-0 flex-1">
           {messages.length ? (
             <div className="flex flex-col gap-4 p-4 md:p-6">
@@ -791,18 +1016,23 @@ function ChatView({
                 <MessageBubble key={message.message_id} message={message} />
               ))}
               {isSending && (
-                <div className="flex items-center gap-2 rounded-full border bg-background/70 px-3 py-2 text-sm text-muted-foreground">
+                <div className="flex w-fit items-center gap-2 rounded-full border bg-background/70 px-3 py-2 text-sm text-muted-foreground">
                   <Loader2Icon className="animate-spin" />
-                  Thinking
+                  {t.thinking}
                 </div>
               )}
             </div>
           ) : (
-            <EmptyChat t={t} conversations={conversations.length} documents={documents.length} />
+            <EmptyChat
+              t={t}
+              conversations={conversations.length}
+              documents={documents.length}
+              onPromptSelect={onPromptSelect}
+            />
           )}
         </ScrollArea>
         <div className="border-t bg-card/80 p-3 backdrop-blur">
-          <div className="flex items-end gap-2 rounded-2xl border bg-background p-2 shadow-sm">
+          <div className="flex items-end gap-2 rounded-xl border bg-background p-2 shadow-sm">
             <Textarea
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
@@ -824,9 +1054,12 @@ function ChatView({
               <span className="sr-only">{t.send}</span>
             </Button>
           </div>
-          <div className="mt-2 flex items-center gap-2 px-1 text-xs text-muted-foreground">
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
             <SparklesIcon />
             <span>{t.askHint}</span>
+            </div>
+            <span>{t.composerHint}</span>
           </div>
         </div>
       </div>
@@ -838,29 +1071,36 @@ function EmptyChat({
   t,
   conversations,
   documents,
+  onPromptSelect,
 }: {
   t: Record<string, string>
   conversations: number
   documents: number
+  onPromptSelect: (prompt: string) => void
 }) {
   return (
     <div className="grid min-h-[28rem] place-items-center p-6">
       <div className="max-w-xl text-center">
-        <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl bg-accent text-accent-foreground shadow-sm">
+        <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-sm">
           <BotIcon />
         </div>
         <h2 className="text-xl font-semibold tracking-tight">{t.emptyTitle}</h2>
         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
           {t.emptyDescription}
         </p>
-        <div className="mt-5 grid gap-2 text-left sm:grid-cols-3">
+        <div className="mt-5 text-xs font-medium text-muted-foreground">
+          {t.quickPrompts}
+        </div>
+        <div className="mt-2 grid gap-2 text-left sm:grid-cols-3">
           {[t.promptOne, t.promptTwo, t.promptThree].map((prompt) => (
-            <div
+            <button
               key={prompt}
-              className="rounded-xl border bg-background/75 p-3 text-xs leading-5 text-muted-foreground"
+              data-testid="quick-prompt"
+              className="rounded-lg border bg-background/75 p-3 text-left text-xs leading-5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              onClick={() => onPromptSelect(prompt)}
             >
               {prompt}
-            </div>
+            </button>
           ))}
         </div>
         <div className="mt-5 flex justify-center gap-2">
@@ -887,7 +1127,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
       )}
       <div
         className={cn(
-          "max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm",
+          "max-w-[86%] whitespace-pre-wrap rounded-xl px-4 py-3 text-sm leading-6 shadow-sm md:max-w-[78%]",
           isUser
             ? "bg-primary text-primary-foreground"
             : "border bg-card text-card-foreground"
@@ -908,6 +1148,7 @@ function DocumentsView({
   uploadFiles,
   deleteDocument,
   reindexDocument,
+  isModelConfigured,
 }: {
   t: Record<string, string>
   documents: DocumentRecord[]
@@ -917,24 +1158,35 @@ function DocumentsView({
   uploadFiles: (files: FileList | null) => void
   deleteDocument: (documentId: string) => void
   reindexDocument: (documentId: string) => void
+  isModelConfigured: boolean
 }) {
+  const duplicateCount = documents.filter(
+    (document) => document.status === "duplicate" || document.duplicate_of_document_id
+  ).length
+
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-5 lg:px-8">
       <PageHeader
         title={t.documents}
         description={t.uploadHint}
         badge={`${documents.length} ${t.documentCount}`}
+        actions={
+          <StatusPill
+            tone={isModelConfigured ? "success" : "warning"}
+            label={isModelConfigured ? t.configured : t.notConfigured}
+          />
+        }
       />
       <div className="grid gap-3 md:grid-cols-3">
         <StatCard icon={FileTextIcon} label={t.documentCount} value={documents.length} />
         <StatCard icon={Layers3Icon} label={t.indexedChunks} value={indexedChunks} />
-        <StatCard icon={HardDriveIcon} label={t.localVector} value="Chroma" />
+        <StatCard icon={HardDriveIcon} label={t.duplicate} value={duplicateCount} />
       </div>
-      <Card className="rag-panel rag-soft-border">
+      <Card className="rag-panel rag-soft-border overflow-hidden">
         <CardHeader className="gap-3 sm:flex sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle>{t.documents}</CardTitle>
-            <CardDescription>{t.noDocumentsDesc}</CardDescription>
+          <div className="min-w-0">
+            <CardTitle>{t.documentLibrary}</CardTitle>
+            <CardDescription>{t.documentLibraryDesc}</CardDescription>
           </div>
           <div>
             <input
@@ -945,20 +1197,25 @@ function DocumentsView({
               className="hidden"
               onChange={(event) => void uploadFiles(event.target.files)}
             />
-            <Button disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
+            <Button
+              data-testid="documents-upload-button"
+              disabled={isUploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
               {isUploading ? (
                 <Loader2Icon data-icon="inline-start" className="animate-spin" />
               ) : (
                 <UploadIcon data-icon="inline-start" />
               )}
-              {t.upload}
+              {isUploading ? t.uploadBusy : t.uploadCta}
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           {documents.length ? (
-            <div className="overflow-hidden rounded-xl border bg-background/65">
-              <Table>
+            <>
+            <div className="hidden overflow-x-auto rounded-lg border bg-background/65 md:block">
+              <Table className="min-w-[860px]">
                 <TableHeader>
                   <TableRow className="bg-muted/60">
                     <TableHead>{t.filename}</TableHead>
@@ -972,18 +1229,16 @@ function DocumentsView({
                 <TableBody>
                   {documents.map((document) => (
                     <TableRow key={document.document_id}>
-                      <TableCell>
+                      <TableCell className="max-w-[20rem]">
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
+                          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
                             <FileTextIcon />
                           </div>
                           <div className="flex min-w-0 flex-col gap-1">
                             <span className="truncate font-medium">
                               {document.original_filename}
                             </span>
-                            <span className="truncate text-xs text-muted-foreground">
-                              {document.document_id}
-                            </span>
+                            <DocumentMeta t={t} document={document} />
                           </div>
                         </div>
                       </TableCell>
@@ -1000,42 +1255,56 @@ function DocumentsView({
                         <Badge variant="outline">{document.chunk_count}</Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex justify-end gap-2">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="icon-sm"
-                                onClick={() => void reindexDocument(document.document_id)}
-                              >
-                                <RefreshCwIcon />
-                                <span className="sr-only">{t.reindex}</span>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>{t.reindex}</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="destructive"
-                                size="icon-sm"
-                                onClick={() => void deleteDocument(document.document_id)}
-                              >
-                                <Trash2Icon />
-                                <span className="sr-only">{t.delete}</span>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>{t.delete}</TooltipContent>
-                          </Tooltip>
-                        </div>
+                        <DocumentActions
+                          t={t}
+                          document={document}
+                          deleteDocument={deleteDocument}
+                          reindexDocument={reindexDocument}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
+            <div className="grid gap-3 md:hidden">
+              {documents.map((document) => (
+                <div
+                  key={document.document_id}
+                  data-testid="mobile-document-card"
+                  className="rounded-lg border bg-background/70 p-3 shadow-sm"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+                      <FileTextIcon />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">
+                        {document.original_filename}
+                      </div>
+                      <DocumentMeta t={t} document={document} />
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <DocumentMiniStat label={t.status} value={<StatusBadge value={document.status} />} />
+                    <DocumentMiniStat label={t.chunks} value={document.chunk_count} />
+                    <DocumentMiniStat label={t.parse} value={document.parse_status} />
+                    <DocumentMiniStat label={t.index} value={document.index_status} />
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <DocumentActions
+                      t={t}
+                      document={document}
+                      deleteDocument={deleteDocument}
+                      reindexDocument={reindexDocument}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            </>
           ) : (
-            <div className="grid min-h-[24rem] place-items-center rounded-xl border border-dashed bg-background/55">
+            <div className="grid min-h-[24rem] place-items-center rounded-lg border border-dashed bg-background/55">
               <Empty>
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
@@ -1045,7 +1314,10 @@ function DocumentsView({
                   <EmptyDescription>{t.noDocumentsDesc}</EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent>
-                  <Button onClick={() => fileInputRef.current?.click()}>
+                  <Button
+                    data-testid="documents-upload-button"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
                     <UploadIcon data-icon="inline-start" />
                     {t.upload}
                   </Button>
@@ -1069,6 +1341,9 @@ function SettingsView({
   resetConfig,
   applyPreset,
   testModel,
+  documents,
+  indexedChunks,
+  isModelConfigured,
 }: {
   t: Record<string, string>
   language: Language
@@ -1079,10 +1354,38 @@ function SettingsView({
   resetConfig: () => void
   applyPreset: (preset: "stable" | "cloud-fast" | "low-resource") => void
   testModel: (kind: "chat" | "embedding") => void
+  documents: DocumentRecord[]
+  indexedChunks: number
+  isModelConfigured: boolean
 }) {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-5 lg:px-8">
-      <PageHeader title={t.settings} description={t.beginnerHint} badge={t.ready} />
+      <PageHeader
+        title={t.settings}
+        description={t.beginnerHint}
+        badge={isModelConfigured ? t.configured : t.notConfigured}
+        actions={
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="outline" onClick={() => void testModel("chat")}>
+              <BotIcon data-icon="inline-start" />
+              {t.testChat}
+            </Button>
+            <Button onClick={() => void saveConfig()}>
+              <CheckIcon data-icon="inline-start" />
+              {t.save}
+            </Button>
+          </div>
+        }
+      />
+      <div className="grid gap-3 md:grid-cols-3">
+        <StatCard
+          icon={DatabaseIcon}
+          label={t.providerSettings}
+          value={config.embedding.provider}
+        />
+        <StatCard icon={FileTextIcon} label={t.documentCount} value={documents.length} />
+        <StatCard icon={Layers3Icon} label={t.indexedChunks} value={indexedChunks} />
+      </div>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Tabs defaultValue="model" className="min-w-0">
           <TabsList className="mb-3">
@@ -1092,12 +1395,16 @@ function SettingsView({
           <TabsContent value="model">
             <Card className="rag-panel rag-soft-border">
               <CardHeader>
-                <CardTitle>{t.modelSettings}</CardTitle>
+                <CardTitle>{t.providerSettings}</CardTitle>
                 <CardDescription>{t.beginnerHint}</CardDescription>
               </CardHeader>
               <CardContent>
                 <FieldGroup className="grid gap-4 md:grid-cols-2">
-                  <Field className="md:col-span-2">
+                  <Field className="rounded-lg border bg-background/65 p-3 md:col-span-2">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-medium">
+                      <BotIcon />
+                      {t.chatSettings}
+                    </div>
                     <FieldLabel htmlFor="chat-base-url">{t.chatBaseUrl}</FieldLabel>
                     <Input
                       id="chat-base-url"
@@ -1110,7 +1417,7 @@ function SettingsView({
                       }
                     />
                   </Field>
-                  <Field>
+                  <Field className="rounded-lg border bg-background/65 p-3">
                     <FieldLabel htmlFor="chat-api-key">{t.chatApiKey}</FieldLabel>
                     <Input
                       id="chat-api-key"
@@ -1124,7 +1431,7 @@ function SettingsView({
                       }
                     />
                   </Field>
-                  <Field>
+                  <Field className="rounded-lg border bg-background/65 p-3">
                     <FieldLabel htmlFor="chat-model">{t.chatModel}</FieldLabel>
                     <Input
                       id="chat-model"
@@ -1140,7 +1447,7 @@ function SettingsView({
                   <div className="md:col-span-2">
                     <Separator />
                   </div>
-                  <Field>
+                  <Field className="rounded-lg border bg-background/65 p-3">
                     <FieldLabel>{t.embeddingProvider}</FieldLabel>
                     <Select
                       value={config.embedding.provider}
@@ -1170,7 +1477,7 @@ function SettingsView({
                       </SelectContent>
                     </Select>
                   </Field>
-                  <Field>
+                  <Field className="rounded-lg border bg-background/65 p-3">
                     <FieldLabel htmlFor="embedding-model">{t.embeddingModel}</FieldLabel>
                     <Input
                       id="embedding-model"
@@ -1183,7 +1490,7 @@ function SettingsView({
                       }
                     />
                   </Field>
-                  <Field>
+                  <Field className="rounded-lg border bg-background/65 p-3">
                     <FieldLabel htmlFor="embedding-base-url">
                       {t.embeddingBaseUrl}
                     </FieldLabel>
@@ -1201,7 +1508,7 @@ function SettingsView({
                       }
                     />
                   </Field>
-                  <Field>
+                  <Field className="rounded-lg border bg-background/65 p-3">
                     <FieldLabel htmlFor="embedding-api-key">
                       {t.embeddingApiKey}
                     </FieldLabel>
@@ -1228,7 +1535,7 @@ function SettingsView({
             <Card className="rag-panel rag-soft-border">
               <CardHeader>
                 <CardTitle>{t.retrievalSettings}</CardTitle>
-                <CardDescription>{t.beginnerHint}</CardDescription>
+                <CardDescription>{t.limitDescription}</CardDescription>
               </CardHeader>
               <CardContent>
                 <FieldGroup className="grid gap-4 md:grid-cols-2">
@@ -1324,19 +1631,27 @@ function SettingsView({
             <CardContent>
               <div className="flex items-center gap-3 rounded-xl border bg-background/70 p-3 text-sm text-muted-foreground">
                 <UserIcon />
-                Future sign-in and account settings will live here.
+                {t.accountPlaceholder}
               </div>
             </CardContent>
           </Card>
-          <FieldSet className="rounded-2xl border bg-card/85 p-3 shadow-sm">
-            <Button onClick={() => void saveConfig()}>
-              <CheckIcon data-icon="inline-start" />
-              {t.save}
-            </Button>
-            <Button variant="outline" onClick={() => void resetConfig()}>
-              <RefreshCwIcon data-icon="inline-start" />
-              {t.reset}
-            </Button>
+          <FieldSet className="rounded-xl border bg-card/85 p-3 shadow-sm">
+            <div className="mb-1 text-sm font-medium">{t.settingsActions}</div>
+            <div className="text-xs leading-5 text-muted-foreground">{t.saveFirst}</div>
+            <div className="mt-3 grid gap-2">
+              <Button onClick={() => void saveConfig()}>
+                <CheckIcon data-icon="inline-start" />
+                {t.save}
+              </Button>
+              <Button variant="outline" onClick={() => void resetConfig()}>
+                <RefreshCwIcon data-icon="inline-start" />
+                {t.reset}
+              </Button>
+            </div>
+            <Separator className="my-3" />
+            <div className="mb-2 text-xs leading-5 text-muted-foreground">
+              {t.presetDescription}
+            </div>
             <div className="grid grid-cols-1 gap-2">
               <Button variant="outline" onClick={() => void applyPreset("stable")}>
                 {t.stable}
@@ -1347,6 +1662,10 @@ function SettingsView({
               <Button variant="outline" onClick={() => void applyPreset("low-resource")}>
                 {t.low}
               </Button>
+            </div>
+            <Separator className="my-3" />
+            <div className="mb-2 text-xs leading-5 text-muted-foreground">
+              {t.testDescription}
             </div>
             <div className="grid grid-cols-2 gap-2">
               <Button variant="secondary" onClick={() => void testModel("chat")}>
@@ -1367,10 +1686,12 @@ function PageHeader({
   title,
   description,
   badge,
+  actions,
 }: {
   title: string
   description: string
   badge: string
+  actions?: React.ReactNode
 }) {
   return (
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
@@ -1380,9 +1701,12 @@ function PageHeader({
           {description}
         </p>
       </div>
-      <Badge variant="secondary" className="mt-1">
-        {badge}
-      </Badge>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {actions}
+        <Badge variant="secondary" className="mt-1">
+          {badge}
+        </Badge>
+      </div>
     </div>
   )
 }
@@ -1397,8 +1721,8 @@ function StatCard({
   value: React.ReactNode
 }) {
   return (
-    <div className="rag-soft-border flex items-center gap-3 rounded-2xl border bg-card/70 p-3 shadow-sm">
-      <div className="flex size-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
+    <div className="rag-soft-border flex items-center gap-3 rounded-xl border bg-card/70 p-3 shadow-sm">
+      <div className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
         <Icon />
       </div>
       <div className="min-w-0">
@@ -1406,6 +1730,35 @@ function StatCard({
         <div className="truncate text-sm font-semibold">{value}</div>
       </div>
     </div>
+  )
+}
+
+function StatusPill({ tone, label }: { tone: StatusTone; label: string }) {
+  const Icon =
+    tone === "success"
+      ? CheckCircle2Icon
+      : tone === "warning"
+        ? AlertTriangleIcon
+        : tone === "destructive"
+          ? XCircleIcon
+          : InfoIcon
+
+  return (
+    <span
+      className={cn(
+        "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium",
+        tone === "success" &&
+          "border-chart-2/25 bg-chart-2/10 text-[color-mix(in_oklch,var(--chart-2),var(--foreground)_30%)]",
+        tone === "warning" &&
+          "border-chart-3/30 bg-chart-3/10 text-[color-mix(in_oklch,var(--chart-3),var(--foreground)_42%)]",
+        tone === "destructive" &&
+          "border-destructive/25 bg-destructive/10 text-destructive",
+        tone === "neutral" && "border-border bg-muted text-muted-foreground"
+      )}
+    >
+      <Icon />
+      {label}
+    </span>
   )
 }
 
@@ -1438,9 +1791,9 @@ function NumberField({
   onChange: (value: number) => void
 }) {
   return (
-    <Field className="rounded-xl border bg-background/70 p-3">
+    <Field className="rounded-lg border bg-background/70 p-3">
       <div className="flex items-start gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
           <Icon />
         </div>
         <div className="min-w-0 flex-1">
@@ -1458,6 +1811,81 @@ function NumberField({
         </div>
       </div>
     </Field>
+  )
+}
+
+function DocumentMeta({
+  t,
+  document,
+}: {
+  t: Record<string, string>
+  document: DocumentRecord
+}) {
+  return (
+    <span
+      className="block truncate text-xs text-muted-foreground"
+      title={document.document_id}
+    >
+      {document.file_type || t.fileType} · {document.document_id}
+    </span>
+  )
+}
+
+function DocumentMiniStat({
+  label,
+  value,
+}: {
+  label: string
+  value: React.ReactNode
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border bg-card/70 p-2">
+      <div className="truncate text-muted-foreground">{label}</div>
+      <div className="mt-1 truncate font-medium text-foreground">{value}</div>
+    </div>
+  )
+}
+
+function DocumentActions({
+  t,
+  document,
+  deleteDocument,
+  reindexDocument,
+}: {
+  t: Record<string, string>
+  document: DocumentRecord
+  deleteDocument: (documentId: string) => void
+  reindexDocument: (documentId: string) => void
+}) {
+  return (
+    <div className="flex justify-end gap-2">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={() => void reindexDocument(document.document_id)}
+          >
+            <RefreshCwIcon />
+            <span className="sr-only">{t.reindex}</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{t.reindexHint}</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="destructive"
+            size="icon-sm"
+            onClick={() => void deleteDocument(document.document_id)}
+          >
+            <Trash2Icon />
+            <span className="sr-only">{t.delete}</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{t.deleteHint}</TooltipContent>
+      </Tooltip>
+    </div>
   )
 }
 

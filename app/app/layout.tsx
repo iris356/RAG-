@@ -13,6 +13,11 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 })
 
+export const metadata = {
+  title: "RAG 知识库助手",
+  description: "基于 Python 和 LangChain 的本地知识库问答工作台",
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{

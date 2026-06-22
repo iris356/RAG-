@@ -48,7 +48,7 @@ http://127.0.0.1:3000
 By default, the frontend calls:
 
 ```text
-http://localhost:8000
+http://127.0.0.1:8000
 ```
 
 To use a different API address, create `app/.env.local`:
