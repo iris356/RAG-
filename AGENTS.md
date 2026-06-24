@@ -1,86 +1,32 @@
-# AGENTS.md 项目执行规范
+# Repository Guidelines
 
-## 基础技术栈
+## Project Structure & Module Organization
 
-本项目固定使用以下技术栈：
+This repository contains a local RAG knowledge base app built around Python, LangChain, FastAPI, Chroma, and SQLite. Core backend code lives in `src/rag_app/`, with focused packages for `api/`, `core/`, `documents/`, `vectors/`, `qa/`, `conversations/`, and `models/`. Tests live in `tests/` and mirror the backend modules. Runtime data directories are under `data/` and should keep only safe placeholders such as `.gitkeep` in Git. Project planning and module summaries live in `docs/`; use `docs/rag-plan.md` as the source of truth for implementation order. The production frontend is in `app/` using Next.js, shadcn/ui, and Tailwind CSS.
 
-- 语言：Python
-- RAG 框架：LangChain
-- Web 框架、向量库、数据库等以 `docs/rag-plan.md` 中的计划为准
+## Build, Test, and Development Commands
 
-实现过程中不得随意更换核心技术栈。若确实需要调整，必须先说明原因、影响范围和替代方案，并等待用户确认。
+- `uv sync`: install Python dependencies.
+- `uv run rag-api`: start the FastAPI backend at `http://127.0.0.1:8000`.
+- `uv run rag-app`: start the legacy Streamlit entry point.
+- `python -m compileall src tests`: perform a quick Python syntax check.
+- `uv run --no-sync pytest`: run the backend test suite.
+- `cd app && npm install`: install frontend dependencies.
+- `cd app && npm run dev`: start the frontend at `http://127.0.0.1:3000`.
+- `cd app && npm run typecheck && npm run lint && npm run build`: validate frontend changes.
 
-## 任务开始前必须读取项目文档
+## Coding Style & Naming Conventions
 
-在开始任何开发任务前，必须先读取 `docs/rag-plan.md`，确认项目总计划、功能模块顺序和当前任务边界。
+Use Python 3.11+ with 4-space indentation, type hints where they clarify behavior, and module names in `snake_case`. Keep FastAPI routes thin and place business logic in service modules. React components use TypeScript, functional components, and file names that match existing conventions such as `rag-workspace.tsx`. Do not change the core stack without explaining the reason, impact, and alternatives first.
 
-执行任务时，必须根据计划书中的功能模块顺序判断当前应该实现的功能，不得跳过前置模块直接开发后续模块，除非用户明确要求。
+## Testing Guidelines
 
-如果计划书与用户的新要求发生冲突，必须先指出冲突点，说明可选调整方案，并等待用户确认后再继续执行。
+Use `pytest` for backend tests. Name files `test_*.py` and keep tests close to the module behavior they verify. For frontend work, run type checking, linting, and a production build. Add or update tests for document ingestion, vector storage, model configuration, API behavior, and RAG answer flows when those areas change.
 
-## 代码修改与版本管理
+## Commit & Pull Request Guidelines
 
-每次完成代码编写或代码修改后，必须进行 Git 版本管理。
+Follow the existing conventional commit style, for example `feat: add model configuration module`, `fix: handle document deletion cleanup`, or `docs: refresh workspace usage guides`. Before committing, run relevant checks and inspect `git status` to ensure only task-related files are included. Pull requests should describe the change, list validation performed, link related issues, and include screenshots for visible frontend updates.
 
-提交前应完成以下检查：
+## Agent-Specific Instructions
 
-- 确认本次改动只包含当前任务相关内容
-- 运行必要的测试、静态检查或基础启动验证
-- 查看 `git status`，确认没有误改无关文件
-- 使用清晰的 commit message 描述本次改动
-
-完成一个可验证的最小功能或修复后，应提交到 Git 仓库。提交信息应简洁明确，例如：
-
-- `feat: initialize project structure`
-- `feat: add model configuration module`
-- `fix: handle document deletion cleanup`
-- `docs: add module summary for model configuration`
-
-不得在未说明原因的情况下积累大量未提交改动。
-
-## GitHub 同步规则
-
-本项目使用 GitHub 作为远程备份仓库。每完成计划书中的一个功能模块后，必须在本地完成提交并同步推送到 GitHub。
-
-模块完成后的标准流程为：
-
-1. 运行必要的测试、静态检查或启动验证。
-2. 编写该模块的总结文档，保存到 `docs` 目录。
-3. 使用 `git status` 检查本次改动范围。
-4. 使用清晰的 commit message 提交本地 Git 仓库。
-5. 执行 `git push`，将当前分支同步到 GitHub。
-
-如果 `git push` 失败，必须先说明失败原因和建议处理方案，不得盲目使用 `--force`。只有在用户明确确认可以覆盖远程内容时，才允许执行强制推送。
-
-日常开发中，不要求每一次小改动都立即推送到 GitHub；但每完成一个功能模块，必须推送一次。
-
-## 功能模块总结与进度记录
-
-每完成计划书中的一个功能模块，必须在 `docs` 目录下编写一份总结文档。该总结文档同时作为当前项目进度记录，不再单独维护额外的进度文件。
-
-总结文档应包含：
-
-- 已完成的功能
-- 涉及的主要文件或模块
-- 关键实现思路
-- 已验证的测试或检查
-- 未完成事项或后续建议
-- 当前模块对后续模块的影响
-
-总结文档建议命名为：
-
-- `docs/module-01-project-foundation-summary.md`
-- `docs/module-02-model-config-summary.md`
-- `docs/module-03-vector-store-summary.md`
-
-开始新任务前，应读取 `docs` 目录下已有的模块总结文档，结合 `docs/rag-plan.md` 判断当前开发进度和下一步任务。
-
-## 执行要求
-
-执行任务时应保持以下原则：
-
-- 严格按照 `docs/rag-plan.md` 的模块顺序推进
-- 优先保证功能可运行、可测试、可回滚
-- 每个模块完成后先验证，再总结，再提交
-- 遇到计划与实际实现冲突时，必须先说明冲突点并提出调整建议
-- 遇到不确定或影响架构的决策时，必须先询问用户确认
+Before development tasks, read `docs/rag-plan.md` and relevant module summaries in `docs/`. Complete work in small, verifiable steps. When finishing a planned module, add a summary document in `docs/`, commit locally, and push to GitHub. Never force-push without explicit user confirmation.
