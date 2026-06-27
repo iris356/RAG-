@@ -8,7 +8,6 @@ This repository contains a local RAG knowledge base app built around Python, Lan
 
 - `uv sync`: install Python dependencies.
 - `uv run rag-api`: start the FastAPI backend at `http://127.0.0.1:8000`.
-- `uv run rag-app`: start the legacy Streamlit entry point.
 - `python -m compileall src tests`: perform a quick Python syntax check.
 - `uv run --no-sync pytest`: run the backend test suite.
 - `cd app && npm install`: install frontend dependencies.

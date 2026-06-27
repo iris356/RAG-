@@ -1,8 +1,8 @@
 # RAG Knowledge App
 
-基于 `Python + LangChain + Chroma + SQLite` 的本地知识库问答项目，正式前端使用 `Next.js + shadcn/ui + Tailwind CSS`，通过 `FastAPI` 调用 Python RAG 服务。旧版 Streamlit 入口仍保留为兼容和回退入口。
+基于 `Python + LangChain + Chroma + SQLite` 的本地知识库问答项目。后端使用 `FastAPI` 提供 HTTP API，正式前端使用 `Next.js + shadcn/ui + Tailwind CSS`，通过 API 调用 Python RAG 服务。
 
-当前已经完成项目计划中的核心 RAG 功能和产品级前端优化，支持模型配置、资料上传、文档解析、向量入库、历史会话、会话长期记忆、RAG 问答、响应式文档管理和设置页。
+当前功能包括模型配置、资料上传、文档解析、向量入库、历史会话、会话记忆、RAG 问答、响应式文档管理和设置页。
 
 ## 文档
 
@@ -32,7 +32,7 @@ API 默认地址：
 http://127.0.0.1:8000
 ```
 
-启动新版前端：
+启动前端：
 
 ```powershell
 cd app
@@ -44,20 +44,6 @@ npm run dev
 
 ```text
 http://127.0.0.1:3000
-```
-
-## 兼容入口
-
-如需使用旧版 Streamlit 入口，可以在项目根目录运行：
-
-```powershell
-uv run rag-app
-```
-
-启动后访问：
-
-```text
-http://localhost:8501
 ```
 
 ## 测试

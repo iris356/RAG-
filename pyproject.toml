@@ -16,13 +16,11 @@ dependencies = [
     "pypdf>=5.0.0",
     "python-multipart>=0.0.20",
     "python-dotenv>=1.0.0",
-    "streamlit>=1.40.0",
     "uvicorn>=0.30.0",
     "sentence-transformers>=5.6.0",
 ]
 
 [project.scripts]
-rag-app = "rag_app.cli:main"
 rag-api = "rag_app.api.cli:main"
 
 [dependency-groups]

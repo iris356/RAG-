@@ -13,8 +13,9 @@ The RAG core still runs in Python. The frontend talks to the Python FastAPI serv
 
 ## Current UI
 
-- Desktop workspace sidebar for documents, new conversation, history, settings, and local status.
-- Main chat workspace with message stream, session context, quick prompts, and bottom input.
+- RAGFlow-style overview dashboard with warm orange palette, left navigation, top search, metric cards, QA test panel, recent imports, activity, and trend panels.
+- Document manager with batch upload, automatic parsing/indexing, duplicate hints, desktop table, and responsive layout.
+- Conversation test view with session list, message stream, and composer.
 - Document manager with batch upload, automatic parsing/indexing, duplicate hints, desktop table, and mobile cards.
 - Settings page for chat model, embedding model, retrieval parameters, embedding rate limits, presets, tests, and language switch.
 - Responsive mobile navigation verified with Playwright.
@@ -96,9 +97,10 @@ npm run build
 
 ## UI Structure
 
-- Left workspace sidebar: document management, new conversation, conversation history, settings.
-- Main chat area: centered message stream and bottom input.
+- Left workspace sidebar: overview, document management, retrieval/conversation testing, settings, status, and recent conversations.
+- Overview: metric cards, smart Q&A test, retrieved snippets, generated answer, recent import tasks, activities, and visual trend panels.
 - Document manager: batch upload, automatic parsing and indexing, duplicate hints, delete, reindex.
+- Conversation test: session list, message stream, delete, new conversation, and question composer.
 - Settings: model configuration, retrieval parameters, embedding rate limits, language switch, future account placeholder.
 
 ## Troubleshooting

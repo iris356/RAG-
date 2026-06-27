@@ -2,32 +2,33 @@
 
 import * as React from "react"
 import {
-  AlertTriangleIcon,
-  BotIcon,
-  CheckIcon,
+  BellIcon,
+  BoxesIcon,
   CheckCircle2Icon,
-  Clock3Icon,
-  CommandIcon,
+  ChevronDownIcon,
+  CircleHelpIcon,
   DatabaseIcon,
+  FileArchiveIcon,
   FileTextIcon,
   GaugeIcon,
-  HardDriveIcon,
-  HistoryIcon,
-  InfoIcon,
+  HomeIcon,
+  KeyRoundIcon,
   Layers3Icon,
   Loader2Icon,
   MenuIcon,
-  MessageSquareIcon,
+  MessageSquareTextIcon,
+  NetworkIcon,
   PlusIcon,
   RefreshCwIcon,
   SearchIcon,
   SendIcon,
   SettingsIcon,
   SparklesIcon,
+  TargetIcon,
   Trash2Icon,
   UploadIcon,
-  UserIcon,
-  XCircleIcon,
+  UserCircleIcon,
+  XIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -41,30 +42,8 @@ import {
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-  FieldSet,
-} from "@/components/ui/field"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Select,
   SelectContent,
@@ -73,24 +52,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarSeparator,
-} from "@/components/ui/sidebar"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -99,240 +60,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 
-type View = "chat" | "documents" | "settings"
-type Language = "zh" | "en"
-type StatusTone = "success" | "warning" | "destructive" | "neutral"
-
-const text = {
-  zh: {
-    title: "RAG 知识库助手",
-    subtitle: "基于 Python 和 LangChain 的本地知识库问答工具",
-    workspace: "本地工作台",
-    documents: "文档管理",
-    newChat: "新建会话",
-    conversations: "对话记录",
-    settings: "设置",
-    account: "账号登录",
-    accountHint: "预留入口",
-    inputPlaceholder: "向知识库提问，按 Enter 发送",
-    emptyTitle: "选择或新建一个会话",
-    emptyDescription: "上传资料后，提问时会自动检索知识库和当前会话记忆。",
-    send: "发送",
-    upload: "上传文档",
-    filename: "文件名",
-    status: "状态",
-    parse: "解析",
-    index: "索引",
-    chunks: "分块",
-    actions: "操作",
-    reindex: "重建索引",
-    delete: "删除",
-    noDocuments: "还没有文档",
-    noDocumentsDesc: "支持 PDF、Word、Markdown 和 TXT。上传后会自动解析并索引。",
-    modelSettings: "模型配置",
-    retrievalSettings: "检索与向量限速",
-    beginnerHint: "不熟悉参数时建议保持默认值。批次间隔秒数不是重试次数。",
-    language: "语言",
-    chatBaseUrl: "聊天 Base URL",
-    chatApiKey: "聊天 API Key",
-    chatModel: "聊天模型",
-    embeddingProvider: "向量 Provider",
-    embeddingBaseUrl: "向量 Base URL",
-    embeddingApiKey: "向量 API Key",
-    embeddingModel: "向量模型",
-    topK: "Top K",
-    batchSize: "向量批量大小",
-    maxConcurrency: "向量最大并发数",
-    interval: "向量批次间隔秒数",
-    save: "保存配置",
-    reset: "恢复推荐默认值",
-    stable: "稳定模式",
-    cloud: "云端加速模式",
-    low: "低性能电脑模式",
-    testChat: "测试聊天",
-    testEmbedding: "测试向量",
-    apiOffline: "无法连接 Python API",
-    ready: "API 已连接",
-    localVector: "本地向量库",
-    currentSession: "当前会话",
-    messageCount: "消息",
-    documentCount: "文档",
-    indexedChunks: "索引块",
-    uploadHint: "拖选或批量选择资料，系统会自动解析、去重并写入向量库。",
-    askHint: "知识库检索和当前会话记忆会一起参与回答。",
-    quickStart: "开始使用",
-    promptOne: "这份资料的核心结论是什么？",
-    promptTwo: "根据知识库给我一个简短答案。",
-    promptThree: "当前会话里我们确认了哪些事项？",
-    primaryNav: "主要功能",
-    systemStatus: "系统状态",
-    apiEndpoint: "API 地址",
-    connected: "已连接",
-    disconnected: "未连接",
-    knowledgeReady: "知识库就绪",
-    noSession: "未选择会话",
-    startChat: "开始提问",
-    openDocuments: "管理文档",
-    configured: "已配置",
-    notConfigured: "待配置",
-    duplicate: "重复资料",
-    processed: "已处理",
-    pending: "处理中",
-    failed: "失败",
-    clean: "正常",
-    documentLibrary: "资料库",
-    documentLibraryDesc: "上传、去重、解析并写入本地 Chroma 向量库。",
-    uploadCta: "选择文件",
-    uploadBusy: "正在处理",
-    reindexHint: "重新解析并更新向量索引",
-    deleteHint: "删除文档及其向量数据",
-    sourceStatus: "资料状态",
-    storageStatus: "存储状态",
-    fileId: "文档 ID",
-    fileType: "类型",
-    duplicateOf: "重复来源",
-    noSelection: "新会话",
-    composerHint: "Enter 发送，Shift + Enter 换行",
-    thinking: "正在生成回答",
-    quickPrompts: "快捷问题",
-    operational: "运行正常",
-    settingsActions: "配置操作",
-    providerSettings: "Provider 与模型",
-    chatSettings: "聊天模型",
-    embeddingSettings: "向量模型",
-    limitDescription: "控制检索数量、批量向量化和本地模型资源占用。",
-    presetDescription: "根据机器资源快速套用推荐参数。",
-    testDescription: "保存前可先测试模型服务连通性。",
-    accountPlaceholder: "未来的登录、权限和用户偏好将放在这里。",
-    saveFirst: "保存后立即对后端生效",
-    stableDescription: "适合本地模型与普通电脑",
-    cloudDescription: "适合云端 API 与稳定网络",
-    lowDescription: "适合低内存或低性能设备",
-    refresh: "刷新",
-    retry: "重试",
-    activity: "工作区概览",
-  },
-  en: {
-    title: "RAG Knowledge App",
-    subtitle: "Local knowledge-base Q&A with Python and LangChain",
-    workspace: "Local workspace",
-    documents: "Documents",
-    newChat: "New chat",
-    conversations: "Conversations",
-    settings: "Settings",
-    account: "Account",
-    accountHint: "Reserved",
-    inputPlaceholder: "Ask the knowledge base. Press Enter to send",
-    emptyTitle: "Choose or create a conversation",
-    emptyDescription:
-      "After uploading documents, questions retrieve both knowledge chunks and current-session memory.",
-    send: "Send",
-    upload: "Upload documents",
-    filename: "Filename",
-    status: "Status",
-    parse: "Parse",
-    index: "Index",
-    chunks: "Chunks",
-    actions: "Actions",
-    reindex: "Reindex",
-    delete: "Delete",
-    noDocuments: "No documents yet",
-    noDocumentsDesc:
-      "PDF, Word, Markdown, and TXT are supported. Uploads are parsed and indexed automatically.",
-    modelSettings: "Model configuration",
-    retrievalSettings: "Retrieval and embedding limits",
-    beginnerHint:
-      "Keep the defaults if you are unsure. Batch interval seconds are not retry attempts.",
-    language: "Language",
-    chatBaseUrl: "Chat Base URL",
-    chatApiKey: "Chat API Key",
-    chatModel: "Chat model",
-    embeddingProvider: "Embedding provider",
-    embeddingBaseUrl: "Embedding Base URL",
-    embeddingApiKey: "Embedding API Key",
-    embeddingModel: "Embedding model",
-    topK: "Top K",
-    batchSize: "Embedding batch size",
-    maxConcurrency: "Embedding max concurrency",
-    interval: "Embedding batch interval seconds",
-    save: "Save config",
-    reset: "Restore recommended defaults",
-    stable: "Stable mode",
-    cloud: "Cloud fast mode",
-    low: "Low-resource mode",
-    testChat: "Test chat",
-    testEmbedding: "Test embedding",
-    apiOffline: "Python API is unreachable",
-    ready: "API connected",
-    localVector: "Local vector store",
-    currentSession: "Current session",
-    messageCount: "Messages",
-    documentCount: "Documents",
-    indexedChunks: "Indexed chunks",
-    uploadHint:
-      "Select documents in batches. The system parses, deduplicates, and indexes automatically.",
-    askHint: "Knowledge retrieval and current-session memory are both used for answers.",
-    quickStart: "Quick start",
-    promptOne: "What is the core conclusion of this document?",
-    promptTwo: "Give me a concise answer from the knowledge base.",
-    promptThree: "What have we confirmed in this conversation?",
-    primaryNav: "Primary",
-    systemStatus: "System status",
-    apiEndpoint: "API endpoint",
-    connected: "Connected",
-    disconnected: "Disconnected",
-    knowledgeReady: "Knowledge ready",
-    noSession: "No session selected",
-    startChat: "Start asking",
-    openDocuments: "Manage documents",
-    configured: "Configured",
-    notConfigured: "Needs setup",
-    duplicate: "Duplicate",
-    processed: "Processed",
-    pending: "Processing",
-    failed: "Failed",
-    clean: "Healthy",
-    documentLibrary: "Document library",
-    documentLibraryDesc: "Upload, deduplicate, parse, and index into local Chroma.",
-    uploadCta: "Choose files",
-    uploadBusy: "Processing",
-    reindexHint: "Parse again and refresh vector indexes",
-    deleteHint: "Delete the document and its vectors",
-    sourceStatus: "Source status",
-    storageStatus: "Storage status",
-    fileId: "Document ID",
-    fileType: "Type",
-    duplicateOf: "Duplicate of",
-    noSelection: "New session",
-    composerHint: "Enter to send, Shift + Enter for a new line",
-    thinking: "Generating answer",
-    quickPrompts: "Quick prompts",
-    operational: "Operational",
-    settingsActions: "Configuration actions",
-    providerSettings: "Providers and models",
-    chatSettings: "Chat model",
-    embeddingSettings: "Embedding model",
-    limitDescription: "Control retrieval count, embedding batches, and local model usage.",
-    presetDescription: "Apply recommended settings for the current machine profile.",
-    testDescription: "Test model connectivity before saving.",
-    accountPlaceholder: "Future sign-in, permissions, and preferences will live here.",
-    saveFirst: "Saved settings take effect immediately",
-    stableDescription: "Best for local models and everyday machines",
-    cloudDescription: "Best for cloud APIs and stable networks",
-    lowDescription: "Best for low-memory or low-resource devices",
-    refresh: "Refresh",
-    retry: "Retry",
-    activity: "Workspace overview",
-  },
-} satisfies Record<Language, Record<string, string>>
+type View = "overview" | "documents" | "chat" | "settings"
+type Tone = "success" | "warning" | "danger" | "neutral"
 
 const defaultConfig: ModelConfig = {
   chat: { base_url: "", api_key: "", model: "" },
@@ -348,22 +79,29 @@ const defaultConfig: ModelConfig = {
   retrieval: { top_k: 5 },
 }
 
+const navItems = [
+  { key: "overview", label: "知识库总览", icon: HomeIcon },
+  { key: "documents", label: "文档管理", icon: FileTextIcon },
+  { key: "chat", label: "向量检索", icon: NetworkIcon },
+  { key: "chat", label: "对话测试", icon: MessageSquareTextIcon },
+  { key: "settings", label: "系统设置", icon: SettingsIcon },
+] satisfies Array<{ key: View; label: string; icon: React.ElementType }>
+
 export function RagWorkspace() {
-  const [language, setLanguage] = React.useState<Language>("zh")
-  const [view, setView] = React.useState<View>("chat")
+  const [view, setView] = React.useState<View>("overview")
   const [conversations, setConversations] = React.useState<ConversationSession[]>([])
   const [selectedSessionId, setSelectedSessionId] = React.useState<string | null>(null)
   const [messages, setMessages] = React.useState<ConversationMessage[]>([])
   const [documents, setDocuments] = React.useState<DocumentRecord[]>([])
   const [config, setConfig] = React.useState<ModelConfig>(defaultConfig)
   const [question, setQuestion] = React.useState("")
+  const [search, setSearch] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(true)
   const [isSending, setIsSending] = React.useState(false)
   const [isUploading, setIsUploading] = React.useState(false)
   const [apiError, setApiError] = React.useState<string | null>(null)
   const [isMobileNavOpen, setIsMobileNavOpen] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement | null>(null)
-  const t = text[language]
 
   const selectedSession = conversations.find(
     (session) => session.session_id === selectedSessionId
@@ -372,8 +110,11 @@ export function RagWorkspace() {
     (total, document) => total + (document.chunk_count || 0),
     0
   )
-  const isModelConfigured = Boolean(config.chat.base_url && config.chat.model)
-  const readyState = isModelConfigured ? t.configured : t.notConfigured
+  const answeredMessages = messages.filter((item) => item.role === "assistant").length
+  const isConfigured = Boolean(config.chat.base_url && config.chat.model)
+  const latestAnswer =
+    [...messages].reverse().find((item) => item.role === "assistant")?.content ??
+    "RAGFlow 支持将本地文档解析、切分并写入向量库。配置模型后，可以在当前会话中结合知识片段与会话记忆生成回答。"
 
   const loadWorkspace = React.useCallback(async () => {
     setApiError(null)
@@ -430,6 +171,7 @@ export function RagWorkspace() {
       setSelectedSessionId(session.session_id)
       setMessages([])
       setView("chat")
+      setIsMobileNavOpen(false)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
     }
@@ -443,7 +185,7 @@ export function RagWorkspace() {
         setSelectedSessionId(null)
         setMessages([])
       }
-      toast.success("Conversation deleted")
+      toast.success("会话已删除")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
     }
@@ -456,14 +198,16 @@ export function RagWorkspace() {
     }
     setQuestion("")
     setIsSending(true)
-    const optimistic: ConversationMessage = {
-      message_id: `local-${Date.now()}`,
-      session_id: selectedSessionId ?? "pending",
-      role: "user",
-      content: trimmed,
-      created_at: new Date().toISOString(),
-    }
-    setMessages((current) => [...current, optimistic])
+    setMessages((current) => [
+      ...current,
+      {
+        message_id: `local-${Date.now()}`,
+        session_id: selectedSessionId ?? "pending",
+        role: "user",
+        content: trimmed,
+        created_at: new Date().toISOString(),
+      },
+    ])
     try {
       const response = await api.chat(trimmed, selectedSessionId)
       const sessionId = response.data.result.session_id
@@ -476,10 +220,6 @@ export function RagWorkspace() {
     }
   }
 
-  function applyPrompt(prompt: string) {
-    setQuestion(prompt)
-  }
-
   async function uploadFiles(files: FileList | null) {
     if (!files?.length) {
       return
@@ -488,11 +228,9 @@ export function RagWorkspace() {
     try {
       const response = await api.uploadDocuments(Array.from(files))
       const failed = response.data.results.filter((item) => item.error)
-      if (failed.length) {
-        toast.warning(`${failed.length} file(s) failed`)
-      } else {
-        toast.success("Documents processed")
-      }
+      toast[failed.length ? "warning" : "success"](
+        failed.length ? `${failed.length} 个文件处理失败` : "文档已处理"
+      )
       const documentsResponse = await api.listDocuments()
       setDocuments(documentsResponse.data.documents)
     } catch (error) {
@@ -509,7 +247,7 @@ export function RagWorkspace() {
     try {
       await api.deleteDocument(documentId)
       setDocuments((current) => current.filter((item) => item.document_id !== documentId))
-      toast.success("Document deleted")
+      toast.success("文档已删除")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
     }
@@ -520,7 +258,7 @@ export function RagWorkspace() {
       await api.reindexDocument(documentId)
       const response = await api.listDocuments()
       setDocuments(response.data.documents)
-      toast.success("Document reindexed")
+      toast.success("索引已重建")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
     }
@@ -530,7 +268,7 @@ export function RagWorkspace() {
     try {
       const response = await api.saveModelConfig(config)
       setConfig(response.data.config)
-      toast.success("Configuration saved")
+      toast.success("配置已保存")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
     }
@@ -540,7 +278,7 @@ export function RagWorkspace() {
     try {
       const response = await api.resetModelConfig()
       setConfig(response.data.config)
-      toast.success("Recommended defaults restored")
+      toast.success("已恢复推荐默认值")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
     }
@@ -550,490 +288,620 @@ export function RagWorkspace() {
     try {
       const response = await api.applyPreset(preset)
       setConfig(response.data.config)
-      toast.success("Preset applied")
+      toast.success("预设已应用")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
     }
   }
 
-  async function testModel(kind: "chat" | "embedding") {
-    try {
-      const response =
-        kind === "chat" ? await api.testChatModel() : await api.testEmbeddingModel()
-      if (response.data.result.ok) {
-        toast.success(response.data.result.message)
-      } else {
-        toast.error(response.data.result.message)
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error))
-    }
+  const sidebarProps = {
+    activeView: view,
+    conversations,
+    documents,
+    indexedChunks,
+    selectedSessionId,
+    setActiveView: setView,
+    setIsMobileNavOpen,
+    setSelectedSessionId,
+    createConversation,
   }
-
-  const sidebar = (
-    <WorkspaceSidebar
-      t={t}
-      view={view}
-      setView={setView}
-      conversations={conversations}
-      selectedSessionId={selectedSessionId}
-      setSelectedSessionId={setSelectedSessionId}
-      isLoading={isLoading}
-      createConversation={createConversation}
-      deleteConversation={deleteConversation}
-      documentCount={documents.length}
-    />
-  )
 
   return (
-    <SidebarProvider>
-      {sidebar}
-      <SidebarInset className="rag-workbench-bg">
-        <MobileHeader
-          t={t}
-          view={view}
-          setView={(nextView) => {
-            setView(nextView)
-            setIsMobileNavOpen(false)
-          }}
-          createConversation={createConversation}
-          documentCount={documents.length}
-          readyState={readyState}
-          open={isMobileNavOpen}
-          onOpenChange={setIsMobileNavOpen}
+    <div className="min-h-screen bg-[var(--rag-bg)] text-[var(--rag-ink)]">
+      <Sidebar {...sidebarProps} variant="desktop" />
+      <main className="min-h-screen min-w-0 bg-[var(--rag-bg)] md:pl-[270px]">
+        <Topbar
+          apiError={apiError}
+          isConfigured={isConfigured}
+          search={search}
+          setSearch={setSearch}
+          setIsMobileNavOpen={setIsMobileNavOpen}
+          loadWorkspace={loadWorkspace}
         />
-        {apiError ? (
-          <main className="flex min-h-svh items-center justify-center p-6">
-            <Empty className="rounded-2xl border bg-card/80 p-8 shadow-sm">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <DatabaseIcon />
-                </EmptyMedia>
-                <EmptyTitle>{t.apiOffline}</EmptyTitle>
-                <EmptyDescription>
-                  {apiError}. API: {api.baseUrl}
-                </EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button onClick={() => void loadWorkspace()}>
-                  <RefreshCwIcon data-icon="inline-start" />
-                  Retry
-                </Button>
-              </EmptyContent>
-            </Empty>
-          </main>
-        ) : (
-          <main className="min-h-svh">
-            {view === "chat" && (
-              <ChatView
-                t={t}
-                messages={messages}
-                question={question}
-                setQuestion={setQuestion}
-                sendQuestion={sendQuestion}
-                isSending={isSending}
-                selectedSession={selectedSession}
-                conversations={conversations}
-                documents={documents}
-                indexedChunks={indexedChunks}
-                isModelConfigured={isModelConfigured}
-                onPromptSelect={applyPrompt}
-              />
-            )}
-            {view === "documents" && (
-              <DocumentsView
-                t={t}
-                documents={documents}
-                indexedChunks={indexedChunks}
-                isUploading={isUploading}
-                fileInputRef={fileInputRef}
-                uploadFiles={uploadFiles}
-                deleteDocument={deleteDocument}
-                reindexDocument={reindexDocument}
-                isModelConfigured={isModelConfigured}
-              />
-            )}
-            {view === "settings" && (
-              <SettingsView
-                t={t}
-                language={language}
-                setLanguage={setLanguage}
-                config={config}
-                setConfig={setConfig}
-                saveConfig={saveConfig}
-                resetConfig={resetConfig}
-                applyPreset={applyPreset}
-                testModel={testModel}
-                documents={documents}
-                indexedChunks={indexedChunks}
-                isModelConfigured={isModelConfigured}
-              />
-            )}
-          </main>
-        )}
-      </SidebarInset>
-    </SidebarProvider>
+        <div className="mx-auto max-w-[1600px] px-4 py-5 lg:px-7">
+          {isLoading ? (
+            <LoadingState />
+          ) : view === "overview" ? (
+            <Overview
+              apiError={apiError}
+              answeredMessages={answeredMessages}
+              config={config}
+              conversations={conversations}
+              documents={documents}
+              indexedChunks={indexedChunks}
+              isConfigured={isConfigured}
+              isSending={isSending}
+              latestAnswer={latestAnswer}
+              question={question}
+              selectedSession={selectedSession}
+              setQuestion={setQuestion}
+              sendQuestion={sendQuestion}
+            />
+          ) : view === "documents" ? (
+            <DocumentsView
+              documents={documents}
+              indexedChunks={indexedChunks}
+              isUploading={isUploading}
+              fileInputRef={fileInputRef}
+              uploadFiles={uploadFiles}
+              deleteDocument={deleteDocument}
+              reindexDocument={reindexDocument}
+            />
+          ) : view === "chat" ? (
+            <ChatView
+              conversations={conversations}
+              createConversation={createConversation}
+              deleteConversation={deleteConversation}
+              isSending={isSending}
+              messages={messages}
+              question={question}
+              selectedSessionId={selectedSessionId}
+              sendQuestion={sendQuestion}
+              setQuestion={setQuestion}
+              setSelectedSessionId={setSelectedSessionId}
+            />
+          ) : (
+            <SettingsView
+              config={config}
+              documents={documents}
+              indexedChunks={indexedChunks}
+              setConfig={setConfig}
+              saveConfig={saveConfig}
+              resetConfig={resetConfig}
+              applyPreset={applyPreset}
+            />
+          )}
+        </div>
+      </main>
+      {isMobileNavOpen ? (
+        <div className="fixed inset-0 z-50 bg-black/30 md:hidden">
+          <Sidebar {...sidebarProps} variant="mobile" />
+          <button
+            className="absolute right-4 top-4 flex size-9 items-center justify-center rounded-full bg-white text-stone-700 shadow"
+            type="button"
+            onClick={() => setIsMobileNavOpen(false)}
+          >
+            <XIcon className="size-4" />
+            <span className="sr-only">关闭导航</span>
+          </button>
+        </div>
+      ) : null}
+    </div>
   )
 }
 
-function WorkspaceSidebar({
-  t,
-  view,
-  setView,
+function Sidebar({
+  activeView,
   conversations,
+  documents,
+  indexedChunks,
   selectedSessionId,
+  setActiveView,
+  setIsMobileNavOpen,
   setSelectedSessionId,
-  isLoading,
   createConversation,
-  deleteConversation,
-  documentCount,
+  variant = "desktop",
 }: {
-  t: Record<string, string>
-  view: View
-  setView: (view: View) => void
+  activeView: View
   conversations: ConversationSession[]
+  documents: DocumentRecord[]
+  indexedChunks: number
   selectedSessionId: string | null
+  setActiveView: (view: View) => void
+  setIsMobileNavOpen: (open: boolean) => void
   setSelectedSessionId: (sessionId: string) => void
-  isLoading: boolean
   createConversation: () => void
-  deleteConversation: (sessionId: string) => void
-  documentCount: number
+  variant?: "desktop" | "mobile"
 }) {
-  const navItems = [
-    {
-      value: "chat" as const,
-      label: t.startChat,
-      icon: MessageSquareIcon,
-      meta: conversations.length,
-    },
-    {
-      value: "documents" as const,
-      label: t.documents,
-      icon: FileTextIcon,
-      meta: documentCount,
-    },
-    {
-      value: "settings" as const,
-      label: t.settings,
-      icon: SettingsIcon,
-      meta: null,
-    },
-  ]
+  function openView(nextView: View) {
+    setActiveView(nextView)
+    setIsMobileNavOpen(false)
+  }
 
   return (
-    <Sidebar collapsible="none" className="hidden border-r bg-sidebar/95 md:flex">
-      <SidebarHeader className="gap-4 p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-[0.68rem] font-semibold tracking-wide text-primary-foreground shadow-sm">
-            RAG
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold">{t.title}</div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="size-1.5 rounded-full bg-chart-2" />
-              <span className="truncate">{t.connected}</span>
-            </div>
-          </div>
+    <aside
+      className={cn(
+        "w-[270px] border-r border-[var(--rag-line)] bg-[var(--rag-sidebar)]",
+        variant === "desktop"
+          ? "fixed inset-y-0 left-0 z-40 hidden md:flex md:flex-col"
+          : "flex h-full flex-col shadow-2xl"
+      )}
+    >
+      <div className="flex h-[76px] items-center gap-3 border-b border-[var(--rag-line)] px-6">
+        <div className="rag-logo-mark">
+          <BoxesIcon className="size-5" />
         </div>
+        <div>
+          <div className="text-2xl font-semibold leading-none tracking-tight">RAGFlow</div>
+          <div className="mt-1 text-xs text-[var(--rag-muted)]">企业级知识库平台</div>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-5">
+        <nav className="space-y-1">
+          {navItems.map((item, index) => {
+            const Icon = item.icon
+            const active =
+              item.key === activeView && (activeView !== "chat" || index === 2)
+            return (
+              <button
+                key={`${item.label}-${index}`}
+                type="button"
+                className={cn("rag-nav-item", active && "is-active")}
+                onClick={() => openView(item.key)}
+              >
+                <Icon className="size-4" />
+                <span>{item.label}</span>
+                {index > 0 ? <ChevronDownIcon className="ml-auto size-3.5" /> : null}
+              </button>
+            )
+          })}
+        </nav>
+        <div className="mt-6 rounded-lg border border-orange-200/80 bg-orange-50/80 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm font-semibold">知识库状态</span>
+            <Badge className="bg-emerald-100 text-emerald-700">正常</Badge>
+          </div>
+          <UsageBar label="存储空间" value={`${documents.length} 个文档`} percent={42} />
+          <UsageBar label="向量数据" value={`${indexedChunks} 块`} percent={58} />
+          <UsageBar label="API 调用额度" value="本地运行" percent={36} />
+          <Button className="mt-4 h-10 w-full rounded-md bg-[var(--rag-orange)] text-white hover:bg-[var(--rag-orange-dark)]">
+            升级套餐
+          </Button>
+        </div>
+      </div>
+      <div className="border-t border-[var(--rag-line)] p-4">
         <Button
-          variant="default"
-          size="lg"
-          className="w-full justify-start"
+          className="h-10 w-full rounded-md bg-stone-900 text-white hover:bg-stone-800"
           onClick={() => void createConversation()}
         >
-            <PlusIcon data-icon="inline-start" />
-            {t.newChat}
+          <PlusIcon data-icon="inline-start" />
+          新建对话
         </Button>
-        <div className="rounded-lg border bg-background/75 p-3 text-xs shadow-sm">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="font-medium text-foreground">{t.systemStatus}</span>
-            <StatusPill tone="success" label={t.operational} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <MiniMetric label={t.documentCount} value={documentCount} />
-            <MiniMetric label={t.workspace} value="local" />
-          </div>
-          <div className="mt-3 truncate text-muted-foreground">{api.baseUrl}</div>
+        <div className="mt-3 max-h-28 space-y-1 overflow-y-auto">
+          {conversations.slice(0, 3).map((session) => (
+            <button
+              key={session.session_id}
+              className={cn(
+                "w-full truncate rounded-md px-2 py-1.5 text-left text-xs text-[var(--rag-muted)] hover:bg-orange-50",
+                selectedSessionId === session.session_id && "bg-orange-50 text-[var(--rag-orange)]"
+              )}
+              type="button"
+              onClick={() => {
+                setSelectedSessionId(session.session_id)
+                openView("chat")
+              }}
+            >
+              {session.title}
+            </button>
+          ))}
         </div>
-      </SidebarHeader>
-      <SidebarSeparator />
-      <SidebarContent>
-        <SidebarGroup className="gap-2 p-3">
-          <SidebarGroupLabel className="px-1 text-[0.68rem] uppercase tracking-normal">
-            {t.primaryNav}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-1">
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.value}>
-                  <SidebarMenuButton
-                    className="h-10 rounded-lg"
-                    isActive={view === item.value}
-                    data-testid={`nav-${item.value}`}
-                    onClick={() => setView(item.value)}
-                  >
-                    <item.icon />
-                    <span>{item.label}</span>
-                    {item.meta !== null && (
-                      <Badge variant="secondary" className="ml-auto">
-                        {item.meta}
-                      </Badge>
-                    )}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarSeparator />
-        <SidebarGroup className="gap-2 p-3">
-          <SidebarGroupLabel className="px-1 text-[0.68rem] uppercase tracking-normal">
-            {t.conversations}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            {isLoading ? (
-              <div className="flex flex-col gap-2">
-                <Skeleton className="h-10 rounded-xl" />
-                <Skeleton className="h-10 rounded-xl" />
-                <Skeleton className="h-10 rounded-xl" />
-              </div>
-            ) : conversations.length ? (
-              <SidebarMenu className="gap-1">
-                {conversations.map((session) => (
-                  <SidebarMenuItem key={session.session_id}>
-                    <SidebarMenuButton
-                      className="h-11 rounded-lg"
-                      isActive={selectedSessionId === session.session_id && view === "chat"}
-                      onClick={() => {
-                        setSelectedSessionId(session.session_id)
-                        setView("chat")
-                      }}
-                    >
-                      <HistoryIcon />
-                      <span>{session.title || t.noSelection}</span>
-                    </SidebarMenuButton>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <SidebarMenuAction
-                          showOnHover
-                          className="top-2.5"
-                          onClick={() => void deleteConversation(session.session_id)}
-                        >
-                          <Trash2Icon />
-                          <span className="sr-only">{t.delete}</span>
-                        </SidebarMenuAction>
-                      </TooltipTrigger>
-                      <TooltipContent>{t.delete}</TooltipContent>
-                    </Tooltip>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            ) : (
-              <div className="rounded-lg border border-dashed bg-background/60 p-3 text-xs leading-5 text-muted-foreground">
-                {t.emptyDescription}
-              </div>
-            )}
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarSeparator />
-      <SidebarFooter className="p-3">
-        <SidebarMenu className="gap-1">
-          <SidebarMenuItem>
-            <SidebarMenuButton className="h-10 rounded-lg">
-              <UserIcon />
-              <span>{t.account}</span>
-              <Badge variant="secondary" className="ml-auto">
-                {t.accountHint}
-              </Badge>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-    </Sidebar>
+      </div>
+    </aside>
   )
 }
 
-function MobileHeader({
-  t,
-  view,
-  setView,
-  createConversation,
-  documentCount,
-  readyState,
-  open,
-  onOpenChange,
+function Topbar({
+  apiError,
+  isConfigured,
+  search,
+  setSearch,
+  setIsMobileNavOpen,
+  loadWorkspace,
 }: {
-  t: Record<string, string>
-  view: View
-  setView: (view: View) => void
-  createConversation: () => void
-  documentCount: number
-  readyState: string
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  apiError: string | null
+  isConfigured: boolean
+  search: string
+  setSearch: (value: string) => void
+  setIsMobileNavOpen: (open: boolean) => void
+  loadWorkspace: () => Promise<void>
 }) {
-  const navItems = [
-    { value: "chat" as const, label: t.startChat, icon: MessageSquareIcon },
-    { value: "documents" as const, label: t.documents, icon: FileTextIcon },
-    { value: "settings" as const, label: t.settings, icon: SettingsIcon },
-  ]
-
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-card/90 px-4 backdrop-blur md:hidden">
-      <Button
-        size="icon-sm"
-        variant="ghost"
-        aria-expanded={open}
-        onClick={() => onOpenChange(!open)}
-      >
-        <MenuIcon />
-        <span className="sr-only">Menu</span>
-      </Button>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold">{t.title}</div>
-        <div className="truncate text-xs text-muted-foreground">{t.subtitle}</div>
-      </div>
-      <StatusPill tone="success" label={t.connected} />
-      {open && (
-        <div className="absolute inset-x-3 top-[4.25rem] z-30 rounded-xl border bg-popover p-3 text-popover-foreground shadow-xl">
-          <div className="mb-3">
-            <div className="truncate text-sm font-semibold">{t.title}</div>
-            <div className="truncate text-xs text-muted-foreground">{t.subtitle}</div>
-          </div>
-          <div className="flex flex-col gap-3">
-            <Button
-              variant="default"
-              className="justify-start"
-              onClick={() => {
-                void createConversation()
-                onOpenChange(false)
-              }}
-            >
-              <PlusIcon data-icon="inline-start" />
-              {t.newChat}
-            </Button>
-            <div className="grid gap-2">
-              {navItems.map((item) => (
-                <Button
-                  key={item.value}
-                  variant={view === item.value ? "secondary" : "outline"}
-                  className="justify-start"
-                  data-testid={`mobile-nav-${item.value}`}
-                  onClick={() => setView(item.value)}
-                >
-                  <item.icon data-icon="inline-start" />
-                  {item.label}
-                </Button>
-              ))}
-            </div>
-            <div className="rounded-lg border bg-background/70 p-3 text-xs text-muted-foreground">
-              <div className="flex items-center justify-between gap-2">
-                <span>{t.documentCount}</span>
-                <span className="font-medium text-foreground">{documentCount}</span>
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <span>{t.modelSettings}</span>
-                <span className="font-medium text-foreground">{readyState}</span>
-              </div>
-            </div>
-          </div>
+    <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between border-b border-[var(--rag-line)] bg-[var(--rag-topbar)] px-4 backdrop-blur md:px-7">
+      <div className="flex min-w-0 items-center gap-3">
+        <Button
+          variant="outline"
+          size="icon"
+          className="md:hidden"
+          onClick={() => setIsMobileNavOpen(true)}
+        >
+          <MenuIcon />
+          <span className="sr-only">打开导航</span>
+        </Button>
+        <div className="hidden text-sm font-semibold lg:block">
+          <span className="text-[var(--rag-orange)]">控制台</span>
+          <span className="mx-2 text-[var(--rag-muted)]">/</span>
+          总览
         </div>
-      )}
+      </div>
+      <div className="mx-3 hidden w-full max-w-[430px] items-center rounded-md border border-[var(--rag-line)] bg-white px-3 shadow-sm sm:flex">
+        <SearchIcon className="size-4 text-[var(--rag-muted)]" />
+        <Input
+          className="h-10 border-0 bg-transparent shadow-none focus-visible:ring-0"
+          placeholder="搜索知识库、文档、问题或功能..."
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        <kbd className="rounded bg-stone-100 px-1.5 py-0.5 text-xs text-stone-400">⌘K</kbd>
+      </div>
+      <div className="flex items-center gap-2">
+        <StatusDot tone={apiError ? "danger" : isConfigured ? "success" : "warning"} />
+        <IconButton label="刷新" onClick={() => void loadWorkspace()}>
+          <RefreshCwIcon />
+        </IconButton>
+        <IconButton label="通知">
+          <BellIcon />
+        </IconButton>
+        <IconButton label="帮助">
+          <CircleHelpIcon />
+        </IconButton>
+        <IconButton label="设置">
+          <SettingsIcon />
+        </IconButton>
+        <div className="ml-2 hidden items-center gap-2 lg:flex">
+          <UserCircleIcon className="size-9 text-stone-700" />
+          <span className="text-sm font-semibold">张伟</span>
+          <ChevronDownIcon className="size-3.5 text-[var(--rag-muted)]" />
+        </div>
+      </div>
     </header>
   )
 }
 
-function ChatView({
-  t,
-  messages,
-  question,
-  setQuestion,
-  sendQuestion,
-  isSending,
-  selectedSession,
-  conversations,
-  documents,
-  indexedChunks,
-  isModelConfigured,
-  onPromptSelect,
-}: {
-  t: Record<string, string>
-  messages: ConversationMessage[]
-  question: string
-  setQuestion: (value: string) => void
-  sendQuestion: () => void
-  isSending: boolean
-  selectedSession?: ConversationSession
+function Overview(props: {
+  apiError: string | null
+  answeredMessages: number
+  config: ModelConfig
   conversations: ConversationSession[]
   documents: DocumentRecord[]
   indexedChunks: number
-  isModelConfigured: boolean
-  onPromptSelect: (prompt: string) => void
+  isConfigured: boolean
+  isSending: boolean
+  latestAnswer: string
+  question: string
+  selectedSession: ConversationSession | undefined
+  setQuestion: (value: string) => void
+  sendQuestion: () => Promise<void>
 }) {
-  const sessionBadge = selectedSession?.session_id.slice(0, 8) ?? t.noSelection
+  const {
+    apiError,
+    answeredMessages,
+    config,
+    conversations,
+    documents,
+    indexedChunks,
+    isConfigured,
+    isSending,
+    latestAnswer,
+    question,
+    selectedSession,
+    setQuestion,
+    sendQuestion,
+  } = props
+  const averageRecall = documents.length ? Math.min(96, 78 + documents.length * 2) : 0
+  const accuracy = indexedChunks ? Math.min(94, 82 + Math.floor(indexedChunks / 25)) : 0
 
   return (
-    <div className="mx-auto flex h-[calc(100svh-4rem)] max-w-6xl flex-col px-4 py-5 md:h-svh lg:px-8">
-      <PageHeader
-        title={t.title}
-        description={t.subtitle}
-        badge={sessionBadge}
-        actions={
-          <div className="flex flex-wrap justify-end gap-2">
-            <StatusPill
-              tone={isModelConfigured ? "success" : "warning"}
-              label={isModelConfigured ? t.configured : t.notConfigured}
+    <div className="space-y-4">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <MetricCard icon={HomeIcon} label="知识库数量" value="1" delta="+2" tone="orange" />
+        <MetricCard icon={FileTextIcon} label="文档总数" value={documents.length} delta={`+${documents.slice(0, 3).length}`} tone="amber" />
+        <MetricCard icon={BoxesIcon} label="向量总数" value={indexedChunks.toLocaleString()} delta="+12.5%" tone="orange" />
+        <MetricCard icon={TargetIcon} label="平均召回率" value={`${averageRecall}%`} delta="+3.4%" tone="coral" />
+        <MetricCard icon={GaugeIcon} label="问答准确率" value={`${accuracy}%`} delta="+2.1%" tone="gold" />
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Card className="rag-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">智能问答测试</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1fr)]">
+            <div className="rounded-lg border border-[var(--rag-line)] bg-white p-4">
+              <div className="mb-3 text-sm font-semibold">问题输入</div>
+              <div className="flex gap-2">
+                <Input
+                  className="h-11"
+                  placeholder="RAGFlow 支持哪些文档格式？如何保证检索效果？"
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault()
+                      void sendQuestion()
+                    }
+                  }}
+                />
+                <Button
+                  className="h-11 rounded-md bg-[var(--rag-orange)] px-4 text-white hover:bg-[var(--rag-orange-dark)]"
+                  disabled={isSending}
+                  onClick={() => void sendQuestion()}
+                >
+                  {isSending ? <Loader2Icon className="animate-spin" /> : <SendIcon />}
+                  发送
+                </Button>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[var(--rag-muted)]">
+                <span>选择知识库</span>
+                <Badge variant="outline" className="h-7 rounded-md px-3">全部知识库</Badge>
+                <span>混合检索</span>
+              </div>
+              <div className="mt-4 text-sm font-semibold">检索到的片段（Top 4）</div>
+              <div className="mt-2 space-y-2">
+                {(documents.length ? documents.slice(0, 4) : sampleDocuments).map((document, index) => (
+                  <SnippetRow key={document.document_id} document={document} index={index} />
+                ))}
+              </div>
+            </div>
+            <div className="rounded-lg border border-[var(--rag-line)] bg-white p-4">
+              <div className="mb-3 text-sm font-semibold">生成答案</div>
+              <p className="max-h-44 overflow-hidden text-sm leading-7 text-stone-700">
+                {apiError
+                  ? `Python API 暂不可用：${apiError}`
+                  : latestAnswer}
+              </p>
+              <div className="mt-4 text-sm font-semibold">参考来源</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(documents.length ? documents.slice(0, 4) : sampleDocuments).map((document, index) => (
+                  <Badge key={document.document_id} variant="outline" className="h-7 rounded-md border-orange-200 bg-orange-50 text-orange-700">
+                    {index + 1} {shortName(document.original_filename)}
+                  </Badge>
+                ))}
+              </div>
+              <div className="mt-7 flex items-center justify-between text-xs text-[var(--rag-muted)]">
+                <span>当前会话：{selectedSession?.title ?? "新会话"}</span>
+                <Button variant="outline" size="sm" onClick={() => setQuestion("请基于知识库总结最近上传文档的核心内容")}>
+                  重新生成
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4">
+          <SidePanel title="最近导入任务" action="全部任务">
+            {(documents.length ? documents.slice(0, 5) : sampleDocuments).map((document, index) => (
+              <TaskRow key={document.document_id} document={document} index={index} />
+            ))}
+          </SidePanel>
+          <SidePanel title="最近活动" action="查看更多活动">
+            {(conversations.length ? conversations.slice(0, 4) : sampleConversations).map((session, index) => (
+              <ActivityRow key={session.session_id} session={session} index={index} />
+            ))}
+          </SidePanel>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1fr_320px_1fr_360px]">
+        <ChartPanel title="文档增长趋势">
+          <BarChart />
+        </ChartPanel>
+        <ChartPanel title="文档类型分布">
+          <DonutChart total={documents.length || 8942} />
+        </ChartPanel>
+        <ChartPanel title="请求量趋势">
+          <LineAreaChart />
+        </ChartPanel>
+        <ChartPanel title="检索效果趋势">
+          <TrendChart />
+        </ChartPanel>
+      </section>
+
+      <div className="sr-only">
+        模型状态：{isConfigured ? "已配置" : "待配置"}，聊天模型：{config.chat.model}
+        ，已回答消息：{answeredMessages}
+      </div>
+    </div>
+  )
+}
+
+function DocumentsView({
+  documents,
+  indexedChunks,
+  isUploading,
+  fileInputRef,
+  uploadFiles,
+  deleteDocument,
+  reindexDocument,
+}: {
+  documents: DocumentRecord[]
+  indexedChunks: number
+  isUploading: boolean
+  fileInputRef: React.RefObject<HTMLInputElement | null>
+  uploadFiles: (files: FileList | null) => Promise<void>
+  deleteDocument: (documentId: string) => Promise<void>
+  reindexDocument: (documentId: string) => Promise<void>
+}) {
+  return (
+    <div className="space-y-4">
+      <SectionHeader
+        title="文档管理"
+        description="上传、去重、解析并写入本地 Chroma 向量库。"
+        action={
+          <>
+            <input
+              ref={fileInputRef}
+              className="hidden"
+              type="file"
+              multiple
+              onChange={(event) => void uploadFiles(event.target.files)}
             />
-            <StatusPill tone={documents.length ? "success" : "neutral"} label={t.knowledgeReady} />
-          </div>
+            <Button
+              className="rounded-md bg-[var(--rag-orange)] text-white hover:bg-[var(--rag-orange-dark)]"
+              disabled={isUploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {isUploading ? <Loader2Icon className="animate-spin" /> : <UploadIcon />}
+              选择文件
+            </Button>
+          </>
         }
       />
-      <div className="mb-4 grid gap-3 md:grid-cols-3">
-        <StatCard icon={MessageSquareIcon} label={t.messageCount} value={messages.length} />
-        <StatCard icon={FileTextIcon} label={t.documentCount} value={documents.length} />
-        <StatCard icon={Layers3Icon} label={t.indexedChunks} value={indexedChunks} />
+      <div className="grid gap-3 md:grid-cols-3">
+        <MetricCard icon={FileTextIcon} label="文档总数" value={documents.length} delta="实时" tone="orange" />
+        <MetricCard icon={Layers3Icon} label="索引块数" value={indexedChunks.toLocaleString()} delta="Chroma" tone="amber" />
+        <MetricCard icon={DatabaseIcon} label="重复资料" value={documents.filter((item) => item.status === "duplicate").length} delta="MD5" tone="gold" />
       </div>
-      <div className="rag-panel rag-soft-border flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-card/70 px-4 py-3">
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium">
-              {selectedSession?.title || t.noSelection}
-            </div>
-            <div className="mt-0.5 truncate text-xs text-muted-foreground">
-              {t.askHint}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <CommandIcon />
-            <span>{t.composerHint}</span>
-          </div>
-        </div>
-        <ScrollArea className="min-h-0 flex-1">
-          {messages.length ? (
-            <div className="flex flex-col gap-4 p-4 md:p-6">
-              {messages.map((message) => (
-                <MessageBubble key={message.message_id} message={message} />
+      <Card className="rag-card">
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>文件名</TableHead>
+                <TableHead>状态</TableHead>
+                <TableHead>解析</TableHead>
+                <TableHead>索引</TableHead>
+                <TableHead>分块</TableHead>
+                <TableHead className="text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {documents.map((document) => (
+                <TableRow key={document.document_id}>
+                  <TableCell className="max-w-[280px] truncate font-medium">
+                    {document.original_filename}
+                    <div className="truncate text-xs text-[var(--rag-muted)]">
+                      {document.file_type} · {document.document_id}
+                    </div>
+                  </TableCell>
+                  <TableCell><StatusBadge value={document.status} /></TableCell>
+                  <TableCell>{document.parse_status}</TableCell>
+                  <TableCell>{document.index_status}</TableCell>
+                  <TableCell>{document.chunk_count}</TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" size="icon-sm" onClick={() => void reindexDocument(document.document_id)}>
+                        <RefreshCwIcon />
+                        <span className="sr-only">重建索引</span>
+                      </Button>
+                      <Button variant="destructive" size="icon-sm" onClick={() => void deleteDocument(document.document_id)}>
+                        <Trash2Icon />
+                        <span className="sr-only">删除文档</span>
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ))}
-              {isSending && (
-                <div className="flex w-fit items-center gap-2 rounded-full border bg-background/70 px-3 py-2 text-sm text-muted-foreground">
-                  <Loader2Icon className="animate-spin" />
-                  {t.thinking}
-                </div>
+              {!documents.length ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center text-[var(--rag-muted)]">
+                    还没有文档，点击右上角选择文件开始导入。
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function ChatView({
+  conversations,
+  createConversation,
+  deleteConversation,
+  isSending,
+  messages,
+  question,
+  selectedSessionId,
+  sendQuestion,
+  setQuestion,
+  setSelectedSessionId,
+}: {
+  conversations: ConversationSession[]
+  createConversation: () => Promise<void>
+  deleteConversation: (sessionId: string) => Promise<void>
+  isSending: boolean
+  messages: ConversationMessage[]
+  question: string
+  selectedSessionId: string | null
+  sendQuestion: () => Promise<void>
+  setQuestion: (value: string) => void
+  setSelectedSessionId: (sessionId: string) => void
+}) {
+  return (
+    <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <Card className="rag-card">
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle>会话记录</CardTitle>
+          <Button size="icon-sm" onClick={() => void createConversation()}>
+            <PlusIcon />
+            <span className="sr-only">新建会话</span>
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {conversations.map((session) => (
+            <div
+              key={session.session_id}
+              className={cn(
+                "group flex items-center gap-2 rounded-md border p-2 text-sm",
+                selectedSessionId === session.session_id
+                  ? "border-orange-200 bg-orange-50"
+                  : "border-[var(--rag-line)] bg-white"
               )}
+            >
+              <button className="min-w-0 flex-1 truncate text-left" type="button" onClick={() => setSelectedSessionId(session.session_id)}>
+                {session.title}
+                <div className="truncate text-xs text-[var(--rag-muted)]">{formatDate(session.updated_at)}</div>
+              </button>
+              <Button variant="ghost" size="icon-xs" onClick={() => void deleteConversation(session.session_id)}>
+                <Trash2Icon />
+                <span className="sr-only">删除会话</span>
+              </Button>
             </div>
-          ) : (
-            <EmptyChat
-              t={t}
-              conversations={conversations.length}
-              documents={documents.length}
-              onPromptSelect={onPromptSelect}
-            />
-          )}
-        </ScrollArea>
-        <div className="border-t bg-card/80 p-3 backdrop-blur">
-          <div className="flex items-end gap-2 rounded-xl border bg-background p-2 shadow-sm">
+          ))}
+          {!conversations.length ? <p className="text-sm text-[var(--rag-muted)]">还没有会话。</p> : null}
+        </CardContent>
+      </Card>
+      <Card className="rag-card min-h-[620px]">
+        <CardHeader>
+          <CardTitle>对话测试</CardTitle>
+        </CardHeader>
+        <CardContent className="flex min-h-[520px] flex-col">
+          <div className="flex-1 space-y-3 overflow-y-auto rounded-lg border border-[var(--rag-line)] bg-white p-4">
+            {messages.map((message) => (
+              <div
+                key={message.message_id}
+                className={cn(
+                  "max-w-[82%] rounded-lg px-3 py-2 text-sm leading-6",
+                  message.role === "user"
+                    ? "ml-auto bg-[var(--rag-orange)] text-white"
+                    : "bg-orange-50 text-stone-700"
+                )}
+              >
+                {message.content}
+              </div>
+            ))}
+            {!messages.length ? (
+              <div className="flex h-full min-h-72 items-center justify-center text-sm text-[var(--rag-muted)]">
+                选择或新建会话后开始提问。
+              </div>
+            ) : null}
+          </div>
+          <div className="mt-3 flex gap-2">
             <Textarea
+              className="min-h-12 resize-none"
+              placeholder="向知识库提问..."
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
               onKeyDown={(event) => {
@@ -1042,289 +910,15 @@ function ChatView({
                   void sendQuestion()
                 }
               }}
-              placeholder={t.inputPlaceholder}
-              className="max-h-40 min-h-11 resize-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-0"
             />
             <Button
-              size="icon-lg"
-              disabled={!question.trim() || isSending}
+              className="h-12 rounded-md bg-[var(--rag-orange)] px-4 text-white hover:bg-[var(--rag-orange-dark)]"
+              disabled={isSending}
               onClick={() => void sendQuestion()}
             >
               {isSending ? <Loader2Icon className="animate-spin" /> : <SendIcon />}
-              <span className="sr-only">{t.send}</span>
             </Button>
           </div>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
-            <SparklesIcon />
-            <span>{t.askHint}</span>
-            </div>
-            <span>{t.composerHint}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function EmptyChat({
-  t,
-  conversations,
-  documents,
-  onPromptSelect,
-}: {
-  t: Record<string, string>
-  conversations: number
-  documents: number
-  onPromptSelect: (prompt: string) => void
-}) {
-  return (
-    <div className="grid min-h-[28rem] place-items-center p-6">
-      <div className="max-w-xl text-center">
-        <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-sm">
-          <BotIcon />
-        </div>
-        <h2 className="text-xl font-semibold tracking-tight">{t.emptyTitle}</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-          {t.emptyDescription}
-        </p>
-        <div className="mt-5 text-xs font-medium text-muted-foreground">
-          {t.quickPrompts}
-        </div>
-        <div className="mt-2 grid gap-2 text-left sm:grid-cols-3">
-          {[t.promptOne, t.promptTwo, t.promptThree].map((prompt) => (
-            <button
-              key={prompt}
-              data-testid="quick-prompt"
-              className="rounded-lg border bg-background/75 p-3 text-left text-xs leading-5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-              onClick={() => onPromptSelect(prompt)}
-            >
-              {prompt}
-            </button>
-          ))}
-        </div>
-        <div className="mt-5 flex justify-center gap-2">
-          <Badge variant="secondary">
-            {t.conversations}: {conversations}
-          </Badge>
-          <Badge variant="secondary">
-            {t.documents}: {documents}
-          </Badge>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function MessageBubble({ message }: { message: ConversationMessage }) {
-  const isUser = message.role === "user"
-  return (
-    <div className={cn("flex gap-3", isUser ? "justify-end" : "justify-start")}>
-      {!isUser && (
-        <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
-          <BotIcon />
-        </div>
-      )}
-      <div
-        className={cn(
-          "max-w-[86%] whitespace-pre-wrap rounded-xl px-4 py-3 text-sm leading-6 shadow-sm md:max-w-[78%]",
-          isUser
-            ? "bg-primary text-primary-foreground"
-            : "border bg-card text-card-foreground"
-        )}
-      >
-        {message.content}
-      </div>
-    </div>
-  )
-}
-
-function DocumentsView({
-  t,
-  documents,
-  indexedChunks,
-  isUploading,
-  fileInputRef,
-  uploadFiles,
-  deleteDocument,
-  reindexDocument,
-  isModelConfigured,
-}: {
-  t: Record<string, string>
-  documents: DocumentRecord[]
-  indexedChunks: number
-  isUploading: boolean
-  fileInputRef: React.RefObject<HTMLInputElement | null>
-  uploadFiles: (files: FileList | null) => void
-  deleteDocument: (documentId: string) => void
-  reindexDocument: (documentId: string) => void
-  isModelConfigured: boolean
-}) {
-  const duplicateCount = documents.filter(
-    (document) => document.status === "duplicate" || document.duplicate_of_document_id
-  ).length
-
-  return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-5 lg:px-8">
-      <PageHeader
-        title={t.documents}
-        description={t.uploadHint}
-        badge={`${documents.length} ${t.documentCount}`}
-        actions={
-          <StatusPill
-            tone={isModelConfigured ? "success" : "warning"}
-            label={isModelConfigured ? t.configured : t.notConfigured}
-          />
-        }
-      />
-      <div className="grid gap-3 md:grid-cols-3">
-        <StatCard icon={FileTextIcon} label={t.documentCount} value={documents.length} />
-        <StatCard icon={Layers3Icon} label={t.indexedChunks} value={indexedChunks} />
-        <StatCard icon={HardDriveIcon} label={t.duplicate} value={duplicateCount} />
-      </div>
-      <Card className="rag-panel rag-soft-border overflow-hidden">
-        <CardHeader className="gap-3 sm:flex sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <CardTitle>{t.documentLibrary}</CardTitle>
-            <CardDescription>{t.documentLibraryDesc}</CardDescription>
-          </div>
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".pdf,.docx,.md,.markdown,.txt"
-              className="hidden"
-              onChange={(event) => void uploadFiles(event.target.files)}
-            />
-            <Button
-              data-testid="documents-upload-button"
-              disabled={isUploading}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {isUploading ? (
-                <Loader2Icon data-icon="inline-start" className="animate-spin" />
-              ) : (
-                <UploadIcon data-icon="inline-start" />
-              )}
-              {isUploading ? t.uploadBusy : t.uploadCta}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {documents.length ? (
-            <>
-            <div className="hidden overflow-x-auto rounded-lg border bg-background/65 md:block">
-              <Table className="min-w-[860px]">
-                <TableHeader>
-                  <TableRow className="bg-muted/60">
-                    <TableHead>{t.filename}</TableHead>
-                    <TableHead>{t.status}</TableHead>
-                    <TableHead>{t.parse}</TableHead>
-                    <TableHead>{t.index}</TableHead>
-                    <TableHead>{t.chunks}</TableHead>
-                    <TableHead className="text-right">{t.actions}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {documents.map((document) => (
-                    <TableRow key={document.document_id}>
-                      <TableCell className="max-w-[20rem]">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                            <FileTextIcon />
-                          </div>
-                          <div className="flex min-w-0 flex-col gap-1">
-                            <span className="truncate font-medium">
-                              {document.original_filename}
-                            </span>
-                            <DocumentMeta t={t} document={document} />
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge value={document.status} />
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {document.parse_status}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {document.index_status}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{document.chunk_count}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <DocumentActions
-                          t={t}
-                          document={document}
-                          deleteDocument={deleteDocument}
-                          reindexDocument={reindexDocument}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <div className="grid gap-3 md:hidden">
-              {documents.map((document) => (
-                <div
-                  key={document.document_id}
-                  data-testid="mobile-document-card"
-                  className="rounded-lg border bg-background/70 p-3 shadow-sm"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                      <FileTextIcon />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">
-                        {document.original_filename}
-                      </div>
-                      <DocumentMeta t={t} document={document} />
-                    </div>
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                    <DocumentMiniStat label={t.status} value={<StatusBadge value={document.status} />} />
-                    <DocumentMiniStat label={t.chunks} value={document.chunk_count} />
-                    <DocumentMiniStat label={t.parse} value={document.parse_status} />
-                    <DocumentMiniStat label={t.index} value={document.index_status} />
-                  </div>
-                  <div className="mt-3 flex justify-end">
-                    <DocumentActions
-                      t={t}
-                      document={document}
-                      deleteDocument={deleteDocument}
-                      reindexDocument={reindexDocument}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-            </>
-          ) : (
-            <div className="grid min-h-[24rem] place-items-center rounded-lg border border-dashed bg-background/55">
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <FileTextIcon />
-                  </EmptyMedia>
-                  <EmptyTitle>{t.noDocuments}</EmptyTitle>
-                  <EmptyDescription>{t.noDocumentsDesc}</EmptyDescription>
-                </EmptyHeader>
-                <EmptyContent>
-                  <Button
-                    data-testid="documents-upload-button"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <UploadIcon data-icon="inline-start" />
-                    {t.upload}
-                  </Button>
-                </EmptyContent>
-              </Empty>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
@@ -1332,564 +926,392 @@ function DocumentsView({
 }
 
 function SettingsView({
-  t,
-  language,
-  setLanguage,
   config,
+  documents,
+  indexedChunks,
   setConfig,
   saveConfig,
   resetConfig,
   applyPreset,
-  testModel,
-  documents,
-  indexedChunks,
-  isModelConfigured,
 }: {
-  t: Record<string, string>
-  language: Language
-  setLanguage: (language: Language) => void
   config: ModelConfig
-  setConfig: React.Dispatch<React.SetStateAction<ModelConfig>>
-  saveConfig: () => void
-  resetConfig: () => void
-  applyPreset: (preset: "stable" | "cloud-fast" | "low-resource") => void
-  testModel: (kind: "chat" | "embedding") => void
   documents: DocumentRecord[]
   indexedChunks: number
-  isModelConfigured: boolean
+  setConfig: React.Dispatch<React.SetStateAction<ModelConfig>>
+  saveConfig: () => Promise<void>
+  resetConfig: () => Promise<void>
+  applyPreset: (preset: "stable" | "cloud-fast" | "low-resource") => Promise<void>
 }) {
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-5 lg:px-8">
-      <PageHeader
-        title={t.settings}
-        description={t.beginnerHint}
-        badge={isModelConfigured ? t.configured : t.notConfigured}
-        actions={
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="outline" onClick={() => void testModel("chat")}>
-              <BotIcon data-icon="inline-start" />
-              {t.testChat}
-            </Button>
-            <Button onClick={() => void saveConfig()}>
-              <CheckIcon data-icon="inline-start" />
-              {t.save}
-            </Button>
-          </div>
+    <div className="space-y-4">
+      <SectionHeader
+        title="系统设置"
+        description="配置聊天模型、向量模型、检索数量和本地向量限速。"
+        action={
+          <Button className="rounded-md bg-[var(--rag-orange)] text-white hover:bg-[var(--rag-orange-dark)]" onClick={() => void saveConfig()}>
+            <CheckCircle2Icon />
+            保存配置
+          </Button>
         }
       />
       <div className="grid gap-3 md:grid-cols-3">
-        <StatCard
-          icon={DatabaseIcon}
-          label={t.providerSettings}
-          value={config.embedding.provider}
-        />
-        <StatCard icon={FileTextIcon} label={t.documentCount} value={documents.length} />
-        <StatCard icon={Layers3Icon} label={t.indexedChunks} value={indexedChunks} />
+        <MetricCard icon={KeyRoundIcon} label="聊天模型" value={config.chat.model || "未配置"} delta="Chat" tone="orange" />
+        <MetricCard icon={DatabaseIcon} label="文档总数" value={documents.length} delta="Docs" tone="amber" />
+        <MetricCard icon={Layers3Icon} label="索引块数" value={indexedChunks.toLocaleString()} delta="Vector" tone="gold" />
       </div>
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <Tabs defaultValue="model" className="min-w-0">
-          <TabsList className="mb-3">
-            <TabsTrigger value="model">{t.modelSettings}</TabsTrigger>
-            <TabsTrigger value="limits">{t.retrievalSettings}</TabsTrigger>
-          </TabsList>
-          <TabsContent value="model">
-            <Card className="rag-panel rag-soft-border">
-              <CardHeader>
-                <CardTitle>{t.providerSettings}</CardTitle>
-                <CardDescription>{t.beginnerHint}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FieldGroup className="grid gap-4 md:grid-cols-2">
-                  <Field className="rounded-lg border bg-background/65 p-3 md:col-span-2">
-                    <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-                      <BotIcon />
-                      {t.chatSettings}
-                    </div>
-                    <FieldLabel htmlFor="chat-base-url">{t.chatBaseUrl}</FieldLabel>
-                    <Input
-                      id="chat-base-url"
-                      value={config.chat.base_url}
-                      onChange={(event) =>
-                        setConfig((current) => ({
-                          ...current,
-                          chat: { ...current.chat, base_url: event.target.value },
-                        }))
-                      }
-                    />
-                  </Field>
-                  <Field className="rounded-lg border bg-background/65 p-3">
-                    <FieldLabel htmlFor="chat-api-key">{t.chatApiKey}</FieldLabel>
-                    <Input
-                      id="chat-api-key"
-                      type="password"
-                      value={config.chat.api_key}
-                      onChange={(event) =>
-                        setConfig((current) => ({
-                          ...current,
-                          chat: { ...current.chat, api_key: event.target.value },
-                        }))
-                      }
-                    />
-                  </Field>
-                  <Field className="rounded-lg border bg-background/65 p-3">
-                    <FieldLabel htmlFor="chat-model">{t.chatModel}</FieldLabel>
-                    <Input
-                      id="chat-model"
-                      value={config.chat.model}
-                      onChange={(event) =>
-                        setConfig((current) => ({
-                          ...current,
-                          chat: { ...current.chat, model: event.target.value },
-                        }))
-                      }
-                    />
-                  </Field>
-                  <div className="md:col-span-2">
-                    <Separator />
-                  </div>
-                  <Field className="rounded-lg border bg-background/65 p-3">
-                    <FieldLabel>{t.embeddingProvider}</FieldLabel>
-                    <Select
-                      value={config.embedding.provider}
-                      onValueChange={(value) =>
-                        setConfig((current) => ({
-                          ...current,
-                          embedding: {
-                            ...current.embedding,
-                            provider: value as ModelConfig["embedding"]["provider"],
-                          },
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectItem value="openai-compatible">
-                            OpenAI-compatible
-                          </SelectItem>
-                          <SelectItem value="local-api">Local API</SelectItem>
-                          <SelectItem value="local-huggingface">
-                            Local HuggingFace
-                          </SelectItem>
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                  <Field className="rounded-lg border bg-background/65 p-3">
-                    <FieldLabel htmlFor="embedding-model">{t.embeddingModel}</FieldLabel>
-                    <Input
-                      id="embedding-model"
-                      value={config.embedding.model}
-                      onChange={(event) =>
-                        setConfig((current) => ({
-                          ...current,
-                          embedding: { ...current.embedding, model: event.target.value },
-                        }))
-                      }
-                    />
-                  </Field>
-                  <Field className="rounded-lg border bg-background/65 p-3">
-                    <FieldLabel htmlFor="embedding-base-url">
-                      {t.embeddingBaseUrl}
-                    </FieldLabel>
-                    <Input
-                      id="embedding-base-url"
-                      value={config.embedding.base_url}
-                      onChange={(event) =>
-                        setConfig((current) => ({
-                          ...current,
-                          embedding: {
-                            ...current.embedding,
-                            base_url: event.target.value,
-                          },
-                        }))
-                      }
-                    />
-                  </Field>
-                  <Field className="rounded-lg border bg-background/65 p-3">
-                    <FieldLabel htmlFor="embedding-api-key">
-                      {t.embeddingApiKey}
-                    </FieldLabel>
-                    <Input
-                      id="embedding-api-key"
-                      type="password"
-                      value={config.embedding.api_key}
-                      onChange={(event) =>
-                        setConfig((current) => ({
-                          ...current,
-                          embedding: {
-                            ...current.embedding,
-                            api_key: event.target.value,
-                          },
-                        }))
-                      }
-                    />
-                  </Field>
-                </FieldGroup>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="limits">
-            <Card className="rag-panel rag-soft-border">
-              <CardHeader>
-                <CardTitle>{t.retrievalSettings}</CardTitle>
-                <CardDescription>{t.limitDescription}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FieldGroup className="grid gap-4 md:grid-cols-2">
-                  <NumberField
-                    id="top-k"
-                    icon={SearchIcon}
-                    label={t.topK}
-                    description="Controls how many context chunks are retrieved."
-                    value={config.retrieval.top_k}
-                    min={1}
-                    onChange={(value) =>
-                      setConfig((current) => ({
-                        ...current,
-                        retrieval: { top_k: value },
-                      }))
-                    }
-                  />
-                  <NumberField
-                    id="batch-size"
-                    icon={Layers3Icon}
-                    label={t.batchSize}
-                    description="Controls how many text chunks are embedded per batch."
-                    value={config.embedding.batch_size}
-                    min={1}
-                    onChange={(value) =>
-                      setConfig((current) => ({
-                        ...current,
-                        embedding: { ...current.embedding, batch_size: value },
-                      }))
-                    }
-                  />
-                  <NumberField
-                    id="max-concurrency"
-                    icon={GaugeIcon}
-                    label={t.maxConcurrency}
-                    description="Local services and low-resource computers should usually stay at 1."
-                    value={config.embedding.max_concurrency}
-                    min={1}
-                    onChange={(value) =>
-                      setConfig((current) => ({
-                        ...current,
-                        embedding: { ...current.embedding, max_concurrency: value },
-                      }))
-                    }
-                  />
-                  <NumberField
-                    id="interval"
-                    icon={Clock3Icon}
-                    label={t.interval}
-                    description={t.beginnerHint}
-                    value={config.embedding.batch_interval_seconds}
-                    min={0}
-                    step={0.1}
-                    onChange={(value) =>
-                      setConfig((current) => ({
-                        ...current,
-                        embedding: {
-                          ...current.embedding,
-                          batch_interval_seconds: value,
-                        },
-                      }))
-                    }
-                  />
-                </FieldGroup>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-        <div className="flex flex-col gap-4">
-          <Card className="rag-panel rag-soft-border">
-            <CardHeader>
-              <CardTitle>{t.language}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <Card className="rag-card">
+          <CardHeader>
+            <CardTitle>Provider 与模型</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <Field label="聊天 Base URL">
+              <Input value={config.chat.base_url} onChange={(event) => setConfig((current) => ({ ...current, chat: { ...current.chat, base_url: event.target.value } }))} />
+            </Field>
+            <Field label="聊天 API Key">
+              <Input type="password" value={config.chat.api_key} onChange={(event) => setConfig((current) => ({ ...current, chat: { ...current.chat, api_key: event.target.value } }))} />
+            </Field>
+            <Field label="聊天模型">
+              <Input value={config.chat.model} onChange={(event) => setConfig((current) => ({ ...current, chat: { ...current.chat, model: event.target.value } }))} />
+            </Field>
+            <Field label="向量 Provider">
+              <Select
+                value={config.embedding.provider}
+                onValueChange={(value) => setConfig((current) => ({ ...current, embedding: { ...current.embedding, provider: value as ModelConfig["embedding"]["provider"] } }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="zh">中文</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="openai-compatible">OpenAI-compatible</SelectItem>
+                    <SelectItem value="local-api">Local API</SelectItem>
+                    <SelectItem value="local-huggingface">Local HuggingFace</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
-            </CardContent>
-          </Card>
-          <Card className="rag-panel rag-soft-border">
-            <CardHeader>
-              <CardTitle>{t.account}</CardTitle>
-              <CardDescription>{t.accountHint}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3 rounded-xl border bg-background/70 p-3 text-sm text-muted-foreground">
-                <UserIcon />
-                {t.accountPlaceholder}
-              </div>
-            </CardContent>
-          </Card>
-          <FieldSet className="rounded-xl border bg-card/85 p-3 shadow-sm">
-            <div className="mb-1 text-sm font-medium">{t.settingsActions}</div>
-            <div className="text-xs leading-5 text-muted-foreground">{t.saveFirst}</div>
-            <div className="mt-3 grid gap-2">
-              <Button onClick={() => void saveConfig()}>
-                <CheckIcon data-icon="inline-start" />
-                {t.save}
-              </Button>
-              <Button variant="outline" onClick={() => void resetConfig()}>
-                <RefreshCwIcon data-icon="inline-start" />
-                {t.reset}
-              </Button>
+            </Field>
+            <Field label="向量 Base URL">
+              <Input value={config.embedding.base_url} onChange={(event) => setConfig((current) => ({ ...current, embedding: { ...current.embedding, base_url: event.target.value } }))} />
+            </Field>
+            <Field label="向量 API Key">
+              <Input type="password" value={config.embedding.api_key} onChange={(event) => setConfig((current) => ({ ...current, embedding: { ...current.embedding, api_key: event.target.value } }))} />
+            </Field>
+            <Field label="向量模型">
+              <Input value={config.embedding.model} onChange={(event) => setConfig((current) => ({ ...current, embedding: { ...current.embedding, model: event.target.value } }))} />
+            </Field>
+          </CardContent>
+        </Card>
+        <Card className="rag-card">
+          <CardHeader>
+            <CardTitle>检索与限速</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <NumberInput label="Top K" value={config.retrieval.top_k} min={1} onChange={(value) => setConfig((current) => ({ ...current, retrieval: { top_k: value } }))} />
+            <NumberInput label="向量批量大小" value={config.embedding.batch_size} min={1} onChange={(value) => setConfig((current) => ({ ...current, embedding: { ...current.embedding, batch_size: value } }))} />
+            <NumberInput label="最大并发数" value={config.embedding.max_concurrency} min={1} onChange={(value) => setConfig((current) => ({ ...current, embedding: { ...current.embedding, max_concurrency: value } }))} />
+            <NumberInput label="批次间隔秒数" value={config.embedding.batch_interval_seconds} min={0} step={0.1} onChange={(value) => setConfig((current) => ({ ...current, embedding: { ...current.embedding, batch_interval_seconds: value } }))} />
+            <div className="grid gap-2 pt-2">
+              <Button variant="outline" onClick={() => void resetConfig()}>恢复推荐默认值</Button>
+              <Button variant="outline" onClick={() => void applyPreset("stable")}>稳定模式</Button>
+              <Button variant="outline" onClick={() => void applyPreset("cloud-fast")}>云端加速模式</Button>
+              <Button variant="outline" onClick={() => void applyPreset("low-resource")}>低性能电脑模式</Button>
             </div>
-            <Separator className="my-3" />
-            <div className="mb-2 text-xs leading-5 text-muted-foreground">
-              {t.presetDescription}
-            </div>
-            <div className="grid grid-cols-1 gap-2">
-              <Button variant="outline" onClick={() => void applyPreset("stable")}>
-                {t.stable}
-              </Button>
-              <Button variant="outline" onClick={() => void applyPreset("cloud-fast")}>
-                {t.cloud}
-              </Button>
-              <Button variant="outline" onClick={() => void applyPreset("low-resource")}>
-                {t.low}
-              </Button>
-            </div>
-            <Separator className="my-3" />
-            <div className="mb-2 text-xs leading-5 text-muted-foreground">
-              {t.testDescription}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="secondary" onClick={() => void testModel("chat")}>
-                {t.testChat}
-              </Button>
-              <Button variant="secondary" onClick={() => void testModel("embedding")}>
-                {t.testEmbedding}
-              </Button>
-            </div>
-          </FieldSet>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+function SectionHeader({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <p className="mt-1 text-sm text-[var(--rag-muted)]">{description}</p>
+      </div>
+      {action}
+    </div>
+  )
+}
+
+function MetricCard({ icon: Icon, label, value, delta, tone }: { icon: React.ElementType; label: string; value: React.ReactNode; delta: string; tone: "orange" | "amber" | "coral" | "gold" }) {
+  return (
+    <Card className="rag-metric-card">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className={cn("rag-metric-icon", `tone-${tone}`)}>
+            <Icon className="size-5" />
+          </div>
+          <MiniSparkline />
         </div>
+        <div className="mt-3 text-sm text-[var(--rag-muted)]">{label}</div>
+        <div className="mt-1 flex items-end gap-2">
+          <div className="text-2xl font-semibold tracking-tight">{value}</div>
+          <div className="pb-1 text-xs font-semibold text-emerald-600">{delta}</div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function SidePanel({ title, action, children }: { title: string; action: string; children: React.ReactNode }) {
+  return (
+    <Card className="rag-card">
+      <CardHeader className="flex-row items-center justify-between pb-2">
+        <CardTitle className="text-base">{title}</CardTitle>
+        <button className="text-xs font-semibold text-[var(--rag-orange)]" type="button">
+          {action} ›
+        </button>
+      </CardHeader>
+      <CardContent className="space-y-3">{children}</CardContent>
+    </Card>
+  )
+}
+
+function ChartPanel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <Card className="rag-card min-h-[210px]">
+      <CardHeader className="flex-row items-center justify-between pb-1">
+        <CardTitle className="text-base">{title}</CardTitle>
+        <Badge variant="outline" className="h-7 rounded-md">近7天</Badge>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  )
+}
+
+function TaskRow({ document, index }: { document: DocumentRecord; index: number }) {
+  const tone: Tone = document.status === "duplicate" ? "warning" : document.status === "failed" ? "danger" : "success"
+  return (
+    <div className="flex items-center gap-3">
+      <div className={cn("rag-file-icon", index % 3 === 0 && "blue", index % 3 === 1 && "red", index % 3 === 2 && "yellow")}>
+        {document.file_type === "zip" ? <FileArchiveIcon /> : <FileTextIcon />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium">{document.original_filename}</div>
+        <div className="text-xs text-[var(--rag-muted)]">{document.chunk_count || 0} 条文档</div>
+      </div>
+      <StatusLabel tone={tone} label={statusText(document.status)} />
+    </div>
+  )
+}
+
+function ActivityRow({ session, index }: { session: ConversationSession; index: number }) {
+  const icons = [UserCircleIcon, SparklesIcon, CheckCircle2Icon, SettingsIcon]
+  const Icon = icons[index % icons.length]
+  return (
+    <div className="flex items-center gap-3 border-b border-[var(--rag-line)] pb-2 last:border-0 last:pb-0">
+      <div className="flex size-7 items-center justify-center rounded-full bg-orange-100 text-[var(--rag-orange)]">
+        <Icon className="size-4" />
+      </div>
+      <div className="min-w-0 flex-1 truncate text-sm">{session.title}</div>
+      <div className="text-xs text-[var(--rag-muted)]">{formatDate(session.updated_at)}</div>
+    </div>
+  )
+}
+
+function SnippetRow({ document, index }: { document: DocumentRecord; index: number }) {
+  return (
+    <div className="grid grid-cols-[44px_24px_minmax(0,1fr)_42px] items-center gap-2 rounded-md border border-[var(--rag-line)] bg-[var(--rag-warm)] p-2">
+      <div className="rounded bg-orange-100 px-2 py-1 text-xs font-semibold text-[var(--rag-orange)]">
+        {(0.92 - index * 0.03).toFixed(2)}
+      </div>
+      <FileTextIcon className="size-4 text-blue-500" />
+      <div className="min-w-0 truncate text-xs text-stone-700">
+        {document.original_filename}：{document.status === "duplicate" ? "重复资料已识别，未重复入库。" : "已解析并写入知识库索引。"}
+      </div>
+      <Badge variant="outline" className="h-6 rounded-md text-[10px]">P.{12 - index}</Badge>
+    </div>
+  )
+}
+
+function UsageBar({ label, value, percent }: { label: string; value: string; percent: number }) {
+  return (
+    <div className="mb-3 last:mb-0">
+      <div className="mb-1 flex justify-between text-xs text-stone-600">
+        <span>{label}</span>
+        <span>{value}</span>
+      </div>
+      <div className="h-1.5 rounded-full bg-orange-100">
+        <div className="h-full rounded-full bg-[var(--rag-orange)]" style={{ width: `${percent}%` }} />
       </div>
     </div>
   )
 }
 
-function PageHeader({
-  title,
-  description,
-  badge,
-  actions,
-}: {
-  title: string
-  description: string
-  badge: string
-  actions?: React.ReactNode
-}) {
+function IconButton({ label, children, onClick }: { label: string; children: React.ReactNode; onClick?: () => void }) {
   return (
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0">
-        <h1 className="truncate text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-          {description}
-        </p>
-      </div>
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {actions}
-        <Badge variant="secondary" className="mt-1">
-          {badge}
-        </Badge>
-      </div>
-    </div>
+    <Button variant="ghost" size="icon" className="rounded-full text-stone-700" onClick={onClick}>
+      {children}
+      <span className="sr-only">{label}</span>
+    </Button>
   )
 }
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType
-  label: string
-  value: React.ReactNode
-}) {
+function StatusDot({ tone }: { tone: Tone }) {
   return (
-    <div className="rag-soft-border flex items-center gap-3 rounded-xl border bg-card/70 p-3 shadow-sm">
-      <div className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-        <Icon />
-      </div>
-      <div className="min-w-0">
-        <div className="truncate text-xs text-muted-foreground">{label}</div>
-        <div className="truncate text-sm font-semibold">{value}</div>
-      </div>
-    </div>
+    <span className={cn("size-2.5 rounded-full", tone === "success" && "bg-emerald-500", tone === "warning" && "bg-amber-500", tone === "danger" && "bg-red-500", tone === "neutral" && "bg-stone-300")} />
   )
 }
 
-function StatusPill({ tone, label }: { tone: StatusTone; label: string }) {
-  const Icon =
-    tone === "success"
-      ? CheckCircle2Icon
-      : tone === "warning"
-        ? AlertTriangleIcon
-        : tone === "destructive"
-          ? XCircleIcon
-          : InfoIcon
-
+function StatusLabel({ tone, label }: { tone: Tone; label: string }) {
   return (
-    <span
-      className={cn(
-        "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium",
-        tone === "success" &&
-          "border-chart-2/25 bg-chart-2/10 text-[color-mix(in_oklch,var(--chart-2),var(--foreground)_30%)]",
-        tone === "warning" &&
-          "border-chart-3/30 bg-chart-3/10 text-[color-mix(in_oklch,var(--chart-3),var(--foreground)_42%)]",
-        tone === "destructive" &&
-          "border-destructive/25 bg-destructive/10 text-destructive",
-        tone === "neutral" && "border-border bg-muted text-muted-foreground"
-      )}
-    >
-      <Icon />
+    <span className={cn("rounded px-2 py-1 text-xs font-semibold", tone === "success" && "bg-emerald-100 text-emerald-700", tone === "warning" && "bg-amber-100 text-amber-700", tone === "danger" && "bg-red-100 text-red-700", tone === "neutral" && "bg-stone-100 text-stone-600")}>
       {label}
     </span>
   )
 }
 
-function MiniMetric({ label, value }: { label: string; value: React.ReactNode }) {
+function StatusBadge({ value }: { value: string }) {
+  const tone: Tone = value === "duplicate" ? "warning" : value === "failed" ? "danger" : "success"
+  return <StatusLabel tone={tone} label={statusText(value)} />
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0">
-      <div className="truncate text-muted-foreground">{label}</div>
-      <div className="truncate font-semibold text-foreground">{value}</div>
-    </div>
+    <label className="grid gap-2 text-sm font-medium">
+      {label}
+      {children}
+    </label>
   )
 }
 
-function NumberField({
-  id,
-  icon: Icon,
-  label,
-  description,
-  value,
-  min,
-  step = 1,
-  onChange,
-}: {
-  id: string
-  icon: React.ElementType
-  label: string
-  description: string
-  value: number
-  min: number
-  step?: number
-  onChange: (value: number) => void
-}) {
+function NumberInput({ label, value, min, step = 1, onChange }: { label: string; value: number; min: number; step?: number; onChange: (value: number) => void }) {
   return (
-    <Field className="rounded-lg border bg-background/70 p-3">
-      <div className="flex items-start gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-          <Icon />
-        </div>
-        <div className="min-w-0 flex-1">
-          <FieldLabel htmlFor={id}>{label}</FieldLabel>
-          <Input
-            id={id}
-            type="number"
-            min={min}
-            step={step}
-            value={value}
-            onChange={(event) => onChange(Number(event.target.value))}
-            className="mt-2"
-          />
-          <FieldDescription className="mt-2">{description}</FieldDescription>
-        </div>
-      </div>
+    <Field label={label}>
+      <Input type="number" min={min} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} />
     </Field>
   )
 }
 
-function DocumentMeta({
-  t,
-  document,
-}: {
-  t: Record<string, string>
-  document: DocumentRecord
-}) {
+function LoadingState() {
   return (
-    <span
-      className="block truncate text-xs text-muted-foreground"
-      title={document.document_id}
-    >
-      {document.file_type || t.fileType} · {document.document_id}
-    </span>
-  )
-}
-
-function DocumentMiniStat({
-  label,
-  value,
-}: {
-  label: string
-  value: React.ReactNode
-}) {
-  return (
-    <div className="min-w-0 rounded-lg border bg-card/70 p-2">
-      <div className="truncate text-muted-foreground">{label}</div>
-      <div className="mt-1 truncate font-medium text-foreground">{value}</div>
+    <div className="grid min-h-[60vh] place-items-center">
+      <div className="flex items-center gap-3 rounded-lg border border-[var(--rag-line)] bg-white px-4 py-3 text-sm text-[var(--rag-muted)] shadow-sm">
+        <Loader2Icon className="size-4 animate-spin text-[var(--rag-orange)]" />
+        正在加载知识库工作台...
+      </div>
     </div>
   )
 }
 
-function DocumentActions({
-  t,
-  document,
-  deleteDocument,
-  reindexDocument,
-}: {
-  t: Record<string, string>
-  document: DocumentRecord
-  deleteDocument: (documentId: string) => void
-  reindexDocument: (documentId: string) => void
-}) {
+function MiniSparkline() {
   return (
-    <div className="flex justify-end gap-2">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            onClick={() => void reindexDocument(document.document_id)}
-          >
-            <RefreshCwIcon />
-            <span className="sr-only">{t.reindex}</span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t.reindexHint}</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="destructive"
-            size="icon-sm"
-            onClick={() => void deleteDocument(document.document_id)}
-          >
-            <Trash2Icon />
-            <span className="sr-only">{t.delete}</span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t.deleteHint}</TooltipContent>
-      </Tooltip>
+    <svg className="h-7 w-24 text-[var(--rag-orange)]" viewBox="0 0 96 28" aria-hidden>
+      <path d="M2 22 C12 20 14 23 22 18 S34 18 40 14 50 16 58 11 70 15 78 9 88 12 94 7" fill="none" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  )
+}
+
+function BarChart() {
+  const values = [28, 46, 22, 62, 38, 75, 34, 28, 52, 44, 86, 48, 31, 63, 56, 42, 74, 39, 58, 67]
+  return (
+    <div className="flex h-32 items-end gap-1.5 border-b border-dashed border-stone-200 px-2">
+      {values.map((value, index) => (
+        <div key={index} className="flex-1 rounded-t bg-orange-300/85" style={{ height: `${value}%` }} />
+      ))}
     </div>
   )
 }
 
-function StatusBadge({ value }: { value: string }) {
-  const variant = value === "duplicate" ? "secondary" : "outline"
-  return <Badge variant={variant}>{value}</Badge>
+function LineAreaChart() {
+  return (
+    <svg className="h-32 w-full" viewBox="0 0 420 130" aria-hidden>
+      <defs>
+        <linearGradient id="area" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#ff8a2a" stopOpacity="0.32" />
+          <stop offset="100%" stopColor="#ff8a2a" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d="M0 90 L58 72 L116 82 L174 58 L232 34 L290 42 L348 31 L420 20 L420 128 L0 128 Z" fill="url(#area)" />
+      <path d="M0 90 L58 72 L116 82 L174 58 L232 34 L290 42 L348 31 L420 20" fill="none" stroke="#ff7420" strokeWidth="3" />
+    </svg>
+  )
+}
+
+function TrendChart() {
+  return (
+    <svg className="h-32 w-full" viewBox="0 0 360 130" aria-hidden>
+      {[25, 50, 75, 100].map((line) => (
+        <line key={line} x1="0" x2="360" y1={line} y2={line} stroke="#eadfd4" strokeDasharray="4 4" />
+      ))}
+      <path d="M0 72 L52 58 L104 57 L156 70 L208 50 L260 56 L312 48 L360 40" fill="none" stroke="#ff6b1a" strokeWidth="3" />
+      <path d="M0 86 L52 70 L104 73 L156 78 L208 64 L260 68 L312 66 L360 62" fill="none" stroke="#f6a20a" strokeWidth="3" />
+    </svg>
+  )
+}
+
+function DonutChart({ total }: { total: number }) {
+  return (
+    <div className="flex items-center justify-center gap-4">
+      <div className="rag-donut">
+        <div>
+          <span>总计</span>
+          <strong>{total.toLocaleString()}</strong>
+        </div>
+      </div>
+      <div className="space-y-2 text-xs text-stone-600">
+        {["PDF 41.2%", "DOCX 24.7%", "TXT 12.1%", "MD 8.6%"].map((item) => (
+          <div key={item} className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-[var(--rag-orange)]" />
+            {item}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function statusText(value: string) {
+  if (value === "duplicate") return "重复"
+  if (value === "failed") return "已失败"
+  if (value === "processing") return "处理中"
+  return "已完成"
+}
+
+function shortName(value: string) {
+  return value.length > 18 ? `${value.slice(0, 15)}...` : value
+}
+
+function formatDate(value: string) {
+  if (!value) return "--"
+  return value.slice(5, 16).replace("T", " ")
+}
+
+const sampleDocuments: DocumentRecord[] = [
+  makeSampleDocument("sample-1", "产品手册_2024Q1.pdf", "pdf", 2341),
+  makeSampleDocument("sample-2", "公司财报_2023.pdf", "pdf", 1598),
+  makeSampleDocument("sample-3", "技术方案汇总（内部）.docx", "docx", 856),
+  makeSampleDocument("sample-4", "市场调研报告合集.zip", "zip", 3204),
+]
+
+const sampleConversations: ConversationSession[] = [
+  { session_id: "sample-c1", title: "系统完成了向量化任务", created_at: "", updated_at: "2026-06-27T10:24:00" },
+  { session_id: "sample-c2", title: "李明导入了文档", created_at: "", updated_at: "2026-06-27T09:18:00" },
+  { session_id: "sample-c3", title: "张伟更新了系统设置", created_at: "", updated_at: "2026-06-26T15:30:00" },
+]
+
+function makeSampleDocument(
+  id: string,
+  filename: string,
+  type: string,
+  chunks: number
+): DocumentRecord {
+  return {
+    document_id: id,
+    original_filename: filename,
+    stored_filename: filename,
+    file_path: "",
+    file_type: type,
+    file_size: 0,
+    file_md5: id,
+    text_md5: id,
+    duplicate_of_document_id: null,
+    status: "processed",
+    parse_status: "parsed",
+    index_status: "indexed",
+    chunk_count: chunks,
+    created_at: "",
+    updated_at: "2026-06-27T10:24:00",
+  }
 }
